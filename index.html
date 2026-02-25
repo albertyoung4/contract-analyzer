@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real Estate Contract Analyzer</title>
+  <style>
+    :root {
+      --primary: #1a365d;
+      --primary-light: #2a4a7f;
+      --accent: #e6a817;
+      --bg: #f7f8fc;
+      --card: #ffffff;
+      --border: #d1d5db;
+      --text: #1f2937;
+      --text-light: #6b7280;
+      --green: #059669;
+      --red: #dc2626;
+      --section-bg: #f0f4ff;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 1.5rem 2rem;
+      text-align: center;
+    }
+
+    header h1 { font-size: 1.5rem; font-weight: 600; }
+    header p { font-size: 0.875rem; opacity: 0.8; margin-top: 0.25rem; }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .panel {
+      background: var(--card);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: var(--primary);
+      color: white;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-header .toggle-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+    .panel-header .toggle-btn:hover { opacity: 1; }
+
+    .panel-body { padding: 1rem; }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      margin: 1rem 0 0.5rem;
+      padding-bottom: 0.25rem;
+      border-bottom: 2px solid var(--accent);
+    }
+
+    .section-label:first-child { margin-top: 0; }
+
+    /* Settings */
+    .settings-row {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .settings-row label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .settings-row input[type="password"],
+    .settings-row input[type="text"] {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .settings-row select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: white;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-light); }
+    .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    .btn-outline {
+      background: white;
+      color: var(--primary);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { background: var(--section-bg); }
+
+    .btn-accent {
+      background: var(--accent);
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .btn-accent:hover { background: #d4991a; }
+
+    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+
+    .hint {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      margin-top: 0.35rem;
+    }
+
+    .key-status {
+      font-size: 0.8rem;
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .key-status.not-set { color: var(--text-light); }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--bg);
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--primary);
+      background: var(--section-bg);
+    }
+
+    .upload-zone .icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .upload-zone h3 {
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+      color: var(--text);
+    }
+
+    .upload-zone p {
+      font-size: 0.85rem;
+      color: var(--text-light);
+    }
+
+    .file-info {
+      margin-top: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--section-bg);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .file-info.visible { display: flex; }
+
+    .file-info .file-name { flex: 1; font-weight: 500; }
+
+    .file-info .file-remove {
+      background: none;
+      border: none;
+      color: var(--red);
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .analyze-btn-wrap {
+      margin-top: 0.75rem;
+      text-align: center;
+    }
+
+    /* Progress */
+    .progress-panel {
+      display: none;
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    .progress-panel.visible { display: block; }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .progress-text {
+      font-size: 0.9rem;
+      color: var(--text);
+      margin-bottom: 0.25rem;
+    }
+
+    .progress-sub {
+      font-size: 0.8rem;
+      color: var(--text-light);
+    }
+
+    /* Error */
+    .error-banner {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      position: relative;
+    }
+
+    .error-banner.visible { display: block; }
+
+    .error-banner .dismiss {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.75rem;
+      background: none;
+      border: none;
+      color: #991b1b;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    /* Results */
+    .results-container { display: none; }
+    .results-container.visible { display: block; }
+
+    .results-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #f3f4f6;
+      gap: 1rem;
+    }
+
+    .result-row:last-child { border-bottom: none; }
+
+    .result-label {
+      font-size: 0.825rem;
+      color: var(--text-light);
+      flex-shrink: 0;
+      min-width: 140px;
+    }
+
+    .result-value {
+      font-size: 0.825rem;
+      font-weight: 500;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .result-value.na {
+      color: var(--text-light);
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    .result-value.money { color: var(--green); }
+    .result-value.highlight { color: var(--primary); font-weight: 600; }
+
+    .contingency-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.3rem 0;
+      font-size: 0.825rem;
+    }
+
+    .check { color: var(--green); }
+    .cross { color: var(--red); }
+    .unknown { color: var(--text-light); }
+
+    .stip-text {
+      font-size: 0.825rem;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+
+    .form-badge {
+      display: inline-block;
+      background: var(--section-bg);
+      color: var(--primary);
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+
+    .list-items {
+      font-size: 0.825rem;
+      padding-left: 1.25rem;
+    }
+
+    .list-items li {
+      padding: 0.15rem 0;
+    }
+
+    /* Print */
+    @media print {
+      header { padding: 1rem; }
+      .settings-panel, .upload-panel, .progress-panel,
+      .results-actions, .error-banner { display: none !important; }
+      .results-container { display: block !important; }
+      .panel { break-inside: avoid; border: 1px solid #ccc; }
+      .panel-header { background: var(--primary) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body { background: white; }
+      .container { max-width: 100%; padding: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Real Estate Contract Analyzer</h1>
+    <p>Upload a purchase agreement PDF for an instant MLS-style summary</p>
+  </header>
+
+  <div class="container">
+    <!-- Error Banner -->
+    <div id="errorBanner" class="error-banner">
+      <span id="errorMsg"></span>
+      <button class="dismiss" onclick="dismissError()">&times;</button>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="panel settings-panel">
+      <div class="panel-header">
+        <span>Settings</span>
+        <button class="toggle-btn" id="settingsToggle" onclick="toggleSettings()">Hide</button>
+      </div>
+      <div class="panel-body" id="settingsBody">
+        <div class="settings-row">
+          <label for="apiKey">API Key:</label>
+          <input type="password" id="apiKey" placeholder="sk-ant-..." />
+          <button class="btn btn-sm btn-outline" onclick="toggleKeyVisibility()">Show</button>
+          <button class="btn btn-sm btn-primary" onclick="saveApiKey()">Save</button>
+        </div>
+        <div class="hint">Your Anthropic API key. Stored locally in your browser only &mdash; never sent anywhere except Anthropic's servers.</div>
+        <div class="settings-row" style="margin-top: 0.75rem;">
+          <label for="modelSelect">Model:</label>
+          <select id="modelSelect">
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (Recommended)</option>
+            <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Faster / Cheaper)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Panel -->
+    <div class="panel upload-panel" id="uploadPanel">
+      <div class="panel-header">Upload Purchase Agreement</div>
+      <div class="panel-body">
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div class="icon">&#128196;</div>
+          <h3>Drag &amp; drop your purchase agreement</h3>
+          <p>or click to browse &mdash; PDF files only</p>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf,application/pdf" style="display:none" />
+        <div class="file-info" id="fileInfo">
+          <span>&#128196;</span>
+          <span class="file-name" id="fileName"></span>
+          <span class="file-size" id="fileSize"></span>
+          <button class="file-remove" onclick="clearFile()" title="Remove file">&times;</button>
+        </div>
+        <div class="analyze-btn-wrap">
+          <button class="btn btn-accent" id="analyzeBtn" onclick="processFile()" disabled>Analyze Contract</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Panel -->
+    <div class="panel">
+      <div class="progress-panel" id="progressPanel">
+        <div class="spinner"></div>
+        <div class="progress-text" id="progressText">Preparing...</div>
+        <div class="progress-sub" id="progressSub"></div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-container" id="resultsContainer">
+      <div class="results-actions">
+        <button class="btn btn-primary" onclick="uploadAnother()">&#8634; Upload Another</button>
+        <button class="btn btn-outline" onclick="copyToClipboard()">&#128203; Copy to Clipboard</button>
+        <button class="btn btn-outline" onclick="window.print()">&#128424; Print</button>
+      </div>
+
+      <div id="formBadge" class="form-badge" style="display:none"></div>
+
+      <!-- Property & Price -->
+      <div class="panel" style="margin-bottom:1rem">
+        <div class="panel-header">Property &amp; Price</div>
+        <div class="panel-body">
+          <div class="section-label">Property</div>
+          <div id="propertyRows"></div>
+          <div class="section-label">Price &amp; Terms</div>
+          <div id="priceRows"></div>
+        </div>
+      </div>
+
+      <!-- Financing -->
+      <div class="panel" style="margin-bottom:1rem">
+        <div class="panel-header">Financing</div>
+        <div class="panel-body" id="financingRows"></div>
+      </div>
+
+      <!-- Key Dates -->
+      <div class="panel" style="margin-bottom:1rem">
+        <div class="panel-header">Key Dates</div>
+        <div class="panel-body" id="datesRows"></div>
+      </div>
+
+      <!-- Settlement -->
+      <div class="panel" style="margin-bottom:1rem">
+        <div class="panel-header">Settlement</div>
+        <div class="panel-body" id="settlementRows"></div>
+      </div>
+
+      <!-- Contingencies -->
+      <div class="panel" style="margin-bottom:1rem">
+        <div class="panel-header">Contingencies</div>
+        <div class="panel-body" id="contingenciesRows"></div>
+      </div>
+
+      <!-- Home Warranty -->
+      <div class="panel" id="warrantyPanel" style="margin-bottom:1rem">
+        <div class="panel-header">Home Warranty</div>
+        <div class="panel-body" id="warrantyRows"></div>
+      </div>
+
+      <!-- Personal Property -->
+      <div class="panel" id="propertyItemsPanel" style="margin-bottom:1rem">
+        <div class="panel-header">Personal Property Included / Excluded</div>
+        <div class="panel-body" id="propertyItemsRows"></div>
+      </div>
+
+      <!-- Parties -->
+      <div class="panel" style="margin-bottom:1rem">
+        <div class="panel-header">Parties</div>
+        <div class="panel-body" id="partiesRows"></div>
+      </div>
+
+      <!-- Special Stipulations -->
+      <div class="panel" id="stipPanel" style="margin-bottom:1rem">
+        <div class="panel-header">Special Stipulations / Additional Provisions</div>
+        <div class="panel-body" id="stipRows"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    // Configure pdf.js
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    // State
+    let selectedFile = null;
+    let analysisResult = null;
+
+    // ===== API KEY MANAGEMENT =====
+    function loadApiKey() {
+      const key = localStorage.getItem('anthropic_api_key');
+      if (key) {
+        document.getElementById('apiKey').value = key;
+      }
+      const model = localStorage.getItem('analyzer_model');
+      if (model) {
+        document.getElementById('modelSelect').value = model;
+      }
+    }
+
+    function saveApiKey() {
+      const key = document.getElementById('apiKey').value.trim();
+      if (key) {
+        localStorage.setItem('anthropic_api_key', key);
+        showSuccess('API key saved');
+      }
+    }
+
+    function getApiKey() {
+      return document.getElementById('apiKey').value.trim() || localStorage.getItem('anthropic_api_key') || '';
+    }
+
+    function toggleKeyVisibility() {
+      const input = document.getElementById('apiKey');
+      const btn = input.nextElementSibling;
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'Hide';
+      } else {
+        input.type = 'password';
+        btn.textContent = 'Show';
+      }
+    }
+
+    function toggleSettings() {
+      const body = document.getElementById('settingsBody');
+      const btn = document.getElementById('settingsToggle');
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        btn.textContent = 'Hide';
+      } else {
+        body.style.display = 'none';
+        btn.textContent = 'Show';
+      }
+    }
+
+    // ===== FILE HANDLING =====
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) selectFile(file);
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) selectFile(fileInput.files[0]);
+    });
+
+    function selectFile(file) {
+      if (file.type !== 'application/pdf') {
+        showError('Please upload a PDF file.');
+        return;
+      }
+      if (file.size > 50 * 1024 * 1024) {
+        showError('File too large. Maximum 50MB.');
+        return;
+      }
+      selectedFile = file;
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = formatSize(file.size);
+      document.getElementById('fileInfo').classList.add('visible');
+      document.getElementById('analyzeBtn').disabled = false;
+      dismissError();
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      fileInput.value = '';
+      document.getElementById('fileInfo').classList.remove('visible');
+      document.getElementById('analyzeBtn').disabled = true;
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // ===== ERROR / SUCCESS =====
+    function showError(msg) {
+      const banner = document.getElementById('errorBanner');
+      document.getElementById('errorMsg').textContent = msg;
+      banner.classList.add('visible');
+    }
+
+    function dismissError() {
+      document.getElementById('errorBanner').classList.remove('visible');
+    }
+
+    function showSuccess(msg) {
+      // Brief visual feedback
+      const banner = document.getElementById('errorBanner');
+      banner.style.background = '#f0fdf4';
+      banner.style.borderColor = '#bbf7d0';
+      banner.style.color = '#166534';
+      document.getElementById('errorMsg').textContent = msg;
+      banner.classList.add('visible');
+      setTimeout(() => {
+        dismissError();
+        banner.style.background = '';
+        banner.style.borderColor = '';
+        banner.style.color = '';
+      }, 2000);
+    }
+
+    // ===== PROGRESS =====
+    function showProgress(text, sub) {
+      document.getElementById('progressPanel').classList.add('visible');
+      document.getElementById('progressText').textContent = text;
+      document.getElementById('progressSub').textContent = sub || '';
+    }
+
+    function hideProgress() {
+      document.getElementById('progressPanel').classList.remove('visible');
+    }
+
+    // ===== PDF TEXT EXTRACTION =====
+    async function extractTextFromPDF(file) {
+      if (typeof pdfjsLib === 'undefined') {
+        throw new Error('PDF.js library failed to load. Please check your internet connection and refresh the page.');
+      }
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const totalPages = pdf.numPages;
+      let fullText = '';
+
+      for (let i = 1; i <= totalPages; i++) {
+        showProgress('Extracting text from PDF...', `Page ${i} of ${totalPages}`);
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item => item.str).join(' ');
+        fullText += `\n--- Page ${i} ---\n` + pageText;
+      }
+
+      return fullText.trim();
+    }
+
+    // ===== CLAUDE API =====
+    const SYSTEM_PROMPT = `You are a real estate contract analyst. Extract key details from the purchase agreement text provided and return ONLY valid JSON with no markdown formatting, no code fences, and no explanation.
+
+Use this exact JSON structure. For any field not found in the document, use null. Do not guess or fabricate values.
+
+{
+  "property": {
+    "street": "string",
+    "city": "string",
+    "state": "string (2-letter abbreviation)",
+    "zip": "string",
+    "county": "string",
+    "legal_description": "string (brief, if available)",
+    "parcel_id": "string (tax PIN/parcel number if available)"
+  },
+  "price_and_terms": {
+    "purchase_price": "number",
+    "earnest_money_deposit": "number",
+    "earnest_money_holder": "string",
+    "due_diligence_fee": "number (NC-specific, null if not applicable)",
+    "option_fee": "number (TX-specific, null if not applicable)",
+    "option_period_days": "number (TX-specific, null if not applicable)"
+  },
+  "financing": {
+    "type": "string (Conventional, FHA, VA, USDA, Cash, Seller Financing, Other)",
+    "loan_amount": "number",
+    "down_payment": "number",
+    "down_payment_percent": "number",
+    "interest_rate": "number (if specified)",
+    "loan_term_years": "number (if specified)",
+    "seller_paid_closing_costs": "string (dollar amount or percentage description)",
+    "seller_concessions": "string (describe any other seller concessions)"
+  },
+  "dates": {
+    "contract_date": "string (YYYY-MM-DD)",
+    "due_diligence_deadline": "string (YYYY-MM-DD, inspection/option period end)",
+    "appraisal_deadline": "string (YYYY-MM-DD, if specified separately)",
+    "financing_deadline": "string (YYYY-MM-DD, if specified)",
+    "closing_date": "string (YYYY-MM-DD)",
+    "possession_date": "string (YYYY-MM-DD or description like 'At closing')"
+  },
+  "settlement": {
+    "agent_or_company": "string (settlement agent, title company, or closing attorney)",
+    "location": "string (if specified)"
+  },
+  "home_warranty": {
+    "included": "boolean",
+    "amount": "number",
+    "paid_by": "string (Buyer, Seller, or description)",
+    "company": "string"
+  },
+  "property_details": {
+    "personal_property_included": ["list of items included in sale"],
+    "personal_property_excluded": ["list of items excluded from sale"],
+    "fixtures_notes": "string"
+  },
+  "contingencies": {
+    "inspection": "boolean",
+    "appraisal": "boolean",
+    "financing": "boolean",
+    "sale_of_home": "boolean",
+    "other": ["list of any other contingency descriptions"]
+  },
+  "parties": {
+    "buyers": ["list of buyer full names"],
+    "sellers": ["list of seller full names"],
+    "listing_agent": "string",
+    "listing_brokerage": "string",
+    "selling_agent": "string (buyer's agent)",
+    "selling_brokerage": "string"
+  },
+  "special_stipulations": "string (verbatim or summarized additional provisions, special stipulations, or addenda references)",
+  "contract_form_type": "string (e.g., 'NC Offer to Purchase and Contract - Form 2-T', 'GAR Purchase and Sale Agreement', 'TREC 1-4 Family Residential Contract', etc.)"
+}
+
+Important extraction rules:
+1. For dates, convert all formats to YYYY-MM-DD. If only a description is given (e.g., "30 days from effective date"), include the description as a string.
+2. For monetary amounts, return as numbers without currency symbols or commas.
+3. For contingencies, mark as true if the contingency is present/active, false if explicitly waived, null if not mentioned.
+4. For NC contracts: look for "Due Diligence Fee" and "Due Diligence Period" specifically.
+5. For TX contracts: look for "Option Fee" and "Option Period" specifically.
+6. The "special_stipulations" field should capture any additional terms, addenda references, or special provisions.
+7. If the document appears to be a specific state form, identify it in "contract_form_type".`;
+
+    async function analyzeContract(text) {
+      const apiKey = getApiKey();
+      const model = document.getElementById('modelSelect').value;
+      localStorage.setItem('analyzer_model', model);
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: model,
+          max_tokens: 4096,
+          system: SYSTEM_PROMPT,
+          messages: [{
+            role: 'user',
+            content: 'Extract all contract details from the following real estate purchase agreement text:\n\n' + text
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        if (response.status === 401) throw new Error('Invalid API key. Please check your Anthropic API key.');
+        if (response.status === 429) throw new Error('Rate limited. Please wait a moment and try again.');
+        if (response.status === 529) throw new Error('Anthropic API is temporarily overloaded. Please try again shortly.');
+        throw new Error('API error (' + response.status + '): ' + (errorBody?.error?.message || 'Unknown error'));
+      }
+
+      const data = await response.json();
+      const content = data.content?.[0]?.text || '';
+
+      // Parse JSON, handling possible code fences
+      let jsonStr = content.trim();
+      if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+      }
+
+      return JSON.parse(jsonStr);
+    }
+
+    // ===== MAIN PROCESS =====
+    async function processFile() {
+      if (!selectedFile) { showError('Please select a PDF file.'); return; }
+
+      const apiKey = getApiKey();
+      if (!apiKey || apiKey.length < 10) {
+        showError('Please enter a valid Anthropic API key in Settings.');
+        return;
+      }
+
+      dismissError();
+      document.getElementById('resultsContainer').classList.remove('visible');
+      document.getElementById('uploadPanel').style.display = 'none';
+
+      try {
+        // Step 1: Extract text
+        showProgress('Extracting text from PDF...', 'Starting...');
+        let text;
+        try {
+          text = await extractTextFromPDF(selectedFile);
+        } catch (err) {
+          if (err.message && err.message.includes('password')) {
+            throw new Error('This PDF is password-protected. Please provide an unprotected version.');
+          }
+          throw new Error('Failed to read PDF: ' + err.message);
+        }
+
+        if (text.length < 100) {
+          throw new Error('Could not extract enough text from this PDF. It may be a scanned image. This tool requires text-based (not scanned) PDFs.');
+        }
+
+        // Step 2: Analyze with Claude
+        showProgress('Analyzing contract with AI...', 'This may take a few seconds');
+        let result;
+        try {
+          result = await analyzeContract(text);
+        } catch (err) {
+          if (err instanceof SyntaxError) {
+            throw new Error('Failed to parse AI response. The document may be unusual. Please try again.');
+          }
+          throw err;
+        }
+
+        // Step 3: Render results
+        hideProgress();
+        analysisResult = result;
+        renderResults(result);
+        document.getElementById('resultsContainer').classList.add('visible');
+
+      } catch (err) {
+        hideProgress();
+        document.getElementById('uploadPanel').style.display = 'block';
+        showError(err.message);
+      }
+    }
+
+    // ===== RENDER RESULTS =====
+    function fmt(val) {
+      if (val === null || val === undefined || val === '') return '<span class="na">Not specified</span>';
+      return escapeHtml(String(val));
+    }
+
+    function fmtMoney(val) {
+      if (val === null || val === undefined) return '<span class="na">Not specified</span>';
+      if (typeof val === 'string') return '<span class="money">' + escapeHtml(val) + '</span>';
+      return '<span class="money">$' + Number(val).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + '</span>';
+    }
+
+    function fmtDate(val) {
+      if (!val) return '<span class="na">Not specified</span>';
+      // Try to format YYYY-MM-DD nicely
+      if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        const d = new Date(val + 'T12:00:00');
+        return '<span class="highlight">' + d.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) + '</span>';
+      }
+      return '<span class="highlight">' + escapeHtml(val) + '</span>';
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function row(label, value) {
+      return `<div class="result-row"><span class="result-label">${label}</span><span class="result-value">${value}</span></div>`;
+    }
+
+    function renderResults(d) {
+      // Form type badge
+      const badge = document.getElementById('formBadge');
+      if (d.contract_form_type) {
+        badge.textContent = d.contract_form_type;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+
+      // Property
+      const p = d.property || {};
+      let addr = [p.street, p.city, p.state, p.zip].filter(Boolean).join(', ') || null;
+      let propHtml = row('Address', fmt(addr));
+      if (p.county) propHtml += row('County', fmt(p.county));
+      if (p.parcel_id) propHtml += row('Parcel / Tax ID', fmt(p.parcel_id));
+      if (p.legal_description) propHtml += row('Legal Description', fmt(p.legal_description));
+      document.getElementById('propertyRows').innerHTML = propHtml;
+
+      // Price & Terms
+      const pt = d.price_and_terms || {};
+      let priceHtml = row('Purchase Price', fmtMoney(pt.purchase_price));
+      priceHtml += row('Earnest Money Deposit', fmtMoney(pt.earnest_money_deposit));
+      if (pt.earnest_money_holder) priceHtml += row('EMD Held By', fmt(pt.earnest_money_holder));
+      if (pt.due_diligence_fee !== null && pt.due_diligence_fee !== undefined) {
+        priceHtml += row('Due Diligence Fee', fmtMoney(pt.due_diligence_fee));
+      }
+      if (pt.option_fee !== null && pt.option_fee !== undefined) {
+        priceHtml += row('Option Fee', fmtMoney(pt.option_fee));
+      }
+      if (pt.option_period_days) priceHtml += row('Option Period', fmt(pt.option_period_days + ' days'));
+      document.getElementById('priceRows').innerHTML = priceHtml;
+
+      // Financing
+      const f = d.financing || {};
+      let finHtml = row('Type', fmt(f.type));
+      finHtml += row('Loan Amount', fmtMoney(f.loan_amount));
+      if (f.down_payment !== null && f.down_payment !== undefined) {
+        let dpStr = fmtMoney(f.down_payment);
+        if (f.down_payment_percent) dpStr += ` <span style="color:var(--text-light)">(${f.down_payment_percent}%)</span>`;
+        finHtml += row('Down Payment', dpStr);
+      }
+      if (f.interest_rate) finHtml += row('Interest Rate', fmt(f.interest_rate + '%'));
+      if (f.loan_term_years) finHtml += row('Loan Term', fmt(f.loan_term_years + ' years'));
+      if (f.seller_paid_closing_costs) finHtml += row('Seller Paid Closing Costs', fmt(f.seller_paid_closing_costs));
+      if (f.seller_concessions) finHtml += row('Other Seller Concessions', fmt(f.seller_concessions));
+      document.getElementById('financingRows').innerHTML = finHtml;
+
+      // Key Dates
+      const dt = d.dates || {};
+      let datesHtml = '';
+      if (dt.contract_date) datesHtml += row('Contract Date', fmtDate(dt.contract_date));
+      datesHtml += row('Due Diligence / Inspection Deadline', fmtDate(dt.due_diligence_deadline));
+      if (dt.appraisal_deadline) datesHtml += row('Appraisal Deadline', fmtDate(dt.appraisal_deadline));
+      if (dt.financing_deadline) datesHtml += row('Financing Deadline', fmtDate(dt.financing_deadline));
+      datesHtml += row('Closing Date', fmtDate(dt.closing_date));
+      datesHtml += row('Possession', fmtDate(dt.possession_date));
+      document.getElementById('datesRows').innerHTML = datesHtml;
+
+      // Settlement
+      const s = d.settlement || {};
+      let settHtml = row('Title Company / Attorney', fmt(s.agent_or_company));
+      if (s.location) settHtml += row('Location', fmt(s.location));
+      document.getElementById('settlementRows').innerHTML = settHtml;
+
+      // Contingencies
+      const c = d.contingencies || {};
+      let contHtml = '';
+      const contItems = [
+        ['Inspection', c.inspection],
+        ['Appraisal', c.appraisal],
+        ['Financing', c.financing],
+        ['Sale of Home', c.sale_of_home]
+      ];
+      contItems.forEach(([name, val]) => {
+        let icon, cls;
+        if (val === true) { icon = '&#10003;'; cls = 'check'; }
+        else if (val === false) { icon = '&#10007;'; cls = 'cross'; }
+        else { icon = '&#8212;'; cls = 'unknown'; }
+        contHtml += `<div class="contingency-row"><span class="${cls}">${icon}</span> ${name}${val === false ? ' (Waived)' : ''}</div>`;
+      });
+      if (c.other && c.other.length > 0) {
+        c.other.forEach(item => {
+          contHtml += `<div class="contingency-row"><span class="check">&#10003;</span> ${escapeHtml(item)}</div>`;
+        });
+      }
+      document.getElementById('contingenciesRows').innerHTML = contHtml;
+
+      // Home Warranty
+      const hw = d.home_warranty || {};
+      if (hw.included === true || hw.included === false || hw.amount) {
+        let hwHtml = row('Included', hw.included ? '<span class="check">Yes</span>' : '<span class="cross">No</span>');
+        if (hw.amount) hwHtml += row('Amount', fmtMoney(hw.amount));
+        if (hw.paid_by) hwHtml += row('Paid By', fmt(hw.paid_by));
+        if (hw.company) hwHtml += row('Company', fmt(hw.company));
+        document.getElementById('warrantyRows').innerHTML = hwHtml;
+        document.getElementById('warrantyPanel').style.display = 'block';
+      } else {
+        document.getElementById('warrantyPanel').style.display = 'none';
+      }
+
+      // Personal Property
+      const pd = d.property_details || {};
+      const hasInc = pd.personal_property_included && pd.personal_property_included.length > 0;
+      const hasExc = pd.personal_property_excluded && pd.personal_property_excluded.length > 0;
+      const hasNotes = pd.fixtures_notes;
+      if (hasInc || hasExc || hasNotes) {
+        let ppHtml = '';
+        if (hasInc) {
+          ppHtml += '<div class="section-label" style="margin-top:0">Included</div>';
+          ppHtml += '<ul class="list-items">' + pd.personal_property_included.map(i => `<li>${escapeHtml(i)}</li>`).join('') + '</ul>';
+        }
+        if (hasExc) {
+          ppHtml += '<div class="section-label">Excluded</div>';
+          ppHtml += '<ul class="list-items">' + pd.personal_property_excluded.map(i => `<li>${escapeHtml(i)}</li>`).join('') + '</ul>';
+        }
+        if (hasNotes) {
+          ppHtml += '<div class="section-label">Notes</div>';
+          ppHtml += '<div class="stip-text">' + escapeHtml(hasNotes) + '</div>';
+        }
+        document.getElementById('propertyItemsRows').innerHTML = ppHtml;
+        document.getElementById('propertyItemsPanel').style.display = 'block';
+      } else {
+        document.getElementById('propertyItemsPanel').style.display = 'none';
+      }
+
+      // Parties
+      const pa = d.parties || {};
+      let parHtml = '';
+      parHtml += row('Buyer(s)', pa.buyers && pa.buyers.length ? fmt(pa.buyers.join(', ')) : '<span class="na">Not specified</span>');
+      parHtml += row('Seller(s)', pa.sellers && pa.sellers.length ? fmt(pa.sellers.join(', ')) : '<span class="na">Not specified</span>');
+      if (pa.listing_agent || pa.listing_brokerage) {
+        let la = [pa.listing_agent, pa.listing_brokerage].filter(Boolean).join(' / ');
+        parHtml += row('Listing Agent', fmt(la));
+      }
+      if (pa.selling_agent || pa.selling_brokerage) {
+        let sa = [pa.selling_agent, pa.selling_brokerage].filter(Boolean).join(' / ');
+        parHtml += row("Buyer's Agent", fmt(sa));
+      }
+      document.getElementById('partiesRows').innerHTML = parHtml;
+
+      // Special Stipulations
+      if (d.special_stipulations) {
+        document.getElementById('stipRows').innerHTML = '<div class="stip-text">' + escapeHtml(d.special_stipulations) + '</div>';
+        document.getElementById('stipPanel').style.display = 'block';
+      } else {
+        document.getElementById('stipPanel').style.display = 'none';
+      }
+    }
+
+    // ===== COPY TO CLIPBOARD =====
+    function copyToClipboard() {
+      if (!analysisResult) return;
+      const d = analysisResult;
+      const p = d.property || {};
+      const pt = d.price_and_terms || {};
+      const f = d.financing || {};
+      const dt = d.dates || {};
+      const s = d.settlement || {};
+      const c = d.contingencies || {};
+      const hw = d.home_warranty || {};
+      const pa = d.parties || {};
+
+      const addr = [p.street, p.city, p.state, p.zip].filter(Boolean).join(', ');
+      const na = 'N/A';
+      const money = (v) => v != null ? '$' + Number(v).toLocaleString() : na;
+
+      let lines = [
+        'MLS CHECKLIST SUMMARY',
+        'â'.repeat(40),
+        '',
+        `Property: ${addr || na}`,
+        p.county ? `County: ${p.county}` : null,
+        '',
+        `Purchase Price: ${money(pt.purchase_price)}`,
+        `Earnest Money: ${money(pt.earnest_money_deposit)}`,
+        pt.due_diligence_fee != null ? `Due Diligence Fee: ${money(pt.due_diligence_fee)}` : null,
+        pt.option_fee != null ? `Option Fee: ${money(pt.option_fee)}` : null,
+        '',
+        `Financing: ${f.type || na}`,
+        `Loan Amount: ${money(f.loan_amount)}`,
+        f.down_payment != null ? `Down Payment: ${money(f.down_payment)}${f.down_payment_percent ? ` (${f.down_payment_percent}%)` : ''}` : null,
+        f.seller_paid_closing_costs ? `Seller Closing Costs: ${f.seller_paid_closing_costs}` : null,
+        '',
+        dt.contract_date ? `Contract Date: ${dt.contract_date}` : null,
+        `Inspection/DD Deadline: ${dt.due_diligence_deadline || na}`,
+        `Closing Date: ${dt.closing_date || na}`,
+        `Possession: ${dt.possession_date || na}`,
+        '',
+        `Settlement: ${s.agent_or_company || na}`,
+        '',
+        'Contingencies:',
+        `  Inspection: ${c.inspection === true ? 'Yes' : c.inspection === false ? 'Waived' : na}`,
+        `  Appraisal: ${c.appraisal === true ? 'Yes' : c.appraisal === false ? 'Waived' : na}`,
+        `  Financing: ${c.financing === true ? 'Yes' : c.financing === false ? 'Waived' : na}`,
+        `  Sale of Home: ${c.sale_of_home === true ? 'Yes' : c.sale_of_home === false ? 'No' : na}`,
+        '',
+        `Buyer(s): ${pa.buyers?.join(', ') || na}`,
+        `Seller(s): ${pa.sellers?.join(', ') || na}`,
+        pa.listing_agent ? `Listing Agent: ${pa.listing_agent}${pa.listing_brokerage ? ' / ' + pa.listing_brokerage : ''}` : null,
+        pa.selling_agent ? `Buyer's Agent: ${pa.selling_agent}${pa.selling_brokerage ? ' / ' + pa.selling_brokerage : ''}` : null,
+        '',
+        d.special_stipulations ? `Special Stipulations:\n${d.special_stipulations}` : null,
+      ].filter(l => l !== null).join('\n');
+
+      navigator.clipboard.writeText(lines).then(() => {
+        showSuccess('Copied to clipboard!');
+      }).catch(() => {
+        showError('Failed to copy. Please try again.');
+      });
+    }
+
+    // ===== UPLOAD ANOTHER =====
+    function uploadAnother() {
+      document.getElementById('resultsContainer').classList.remove('visible');
+      document.getElementById('uploadPanel').style.display = 'block';
+      clearFile();
+      analysisResult = null;
+    }
+
+    // ===== INIT =====
+    loadApiKey();
+  </script>
+</body>
+</html>
