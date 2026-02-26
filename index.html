@@ -568,6 +568,12 @@
             <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Faster / Cheaper)</option>
           </select>
         </div>
+        <div class="settings-row" style="margin-top: 0.75rem;">
+          <label for="sheetsUrl">Google Sheets:</label>
+          <input type="text" id="sheetsUrl" placeholder="https://script.google.com/macros/s/..." />
+          <button class="btn btn-sm btn-primary" onclick="saveSheetsUrl()">Save</button>
+        </div>
+        <div class="hint">Google Apps Script URL for auto-saving results to a spreadsheet. <a href="#" onclick="alert('1. Create a Google Sheet\\n2. Go to Extensions → Apps Script\\n3. Paste the script code (see docs)\\n4. Deploy → New Deployment → Web App\\n5. Copy the URL and paste it here'); return false;" style="color:var(--accent)">Setup guide</a></div>
       </div>
     </div>
 
@@ -610,6 +616,7 @@
         <button class="btn btn-outline" onclick="copyToClipboard()">&#128203; Copy to Clipboard</button>
         <button class="btn btn-outline" onclick="window.print()">&#128424; Print</button>
       </div>
+      <div id="sheetStatus" style="display:none; font-size:0.8rem; margin-bottom:0.75rem; padding:0.4rem 0.75rem; border-radius:6px;"></div>
 
       <div id="formBadge" class="form-badge" style="display:none"></div>
 
@@ -703,6 +710,10 @@
       if (model) {
         document.getElementById('modelSelect').value = model;
       }
+      const sheetsUrl = localStorage.getItem('google_sheets_url');
+      if (sheetsUrl) {
+        document.getElementById('sheetsUrl').value = sheetsUrl;
+      }
     }
 
     function saveApiKey() {
@@ -715,6 +726,79 @@
 
     function getApiKey() {
       return document.getElementById('apiKey').value.trim() || localStorage.getItem('anthropic_api_key') || '';
+    }
+
+    // ===== GOOGLE SHEETS =====
+    function saveSheetsUrl() {
+      const url = document.getElementById('sheetsUrl').value.trim();
+      if (url) {
+        localStorage.setItem('google_sheets_url', url);
+        showSuccess('Google Sheets URL saved');
+      }
+    }
+
+    function getSheetsUrl() {
+      return document.getElementById('sheetsUrl').value.trim() || localStorage.getItem('google_sheets_url') || '';
+    }
+
+    async function saveToSheet(data) {
+      const url = getSheetsUrl();
+      if (!url) return; // No Sheets URL configured, skip silently
+
+      const statusEl = document.getElementById('sheetStatus');
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#f0f9ff';
+      statusEl.style.color = 'var(--text-light)';
+      statusEl.textContent = 'Saving to Google Sheets...';
+
+      const p = data.property || {};
+      const pt = data.price_and_terms || {};
+      const f = data.financing || {};
+      const dt = data.dates || {};
+      const s = data.settlement || {};
+      const c = data.contingencies || {};
+      const pa = data.parties || {};
+
+      const row = {
+        'Date Analyzed': new Date().toLocaleString(),
+        'Property Address': [p.street, p.city, p.state, p.zip].filter(Boolean).join(', ') || '',
+        'Buyers': (pa.buyers || []).join(', '),
+        'Sellers': (pa.sellers || []).join(', '),
+        "Buyer's Agent": pa.selling_agent || '',
+        'Agent Email': pa.selling_agent_email || '',
+        'Agent Phone': pa.selling_agent_phone || '',
+        'Listing Agent': pa.listing_agent || '',
+        'Offer Price': pt.purchase_price || '',
+        'Financing Type': f.type || '',
+        'Loan Amount': f.loan_amount || '',
+        'Down Payment': f.down_payment || '',
+        'EMD Amount': pt.earnest_money_deposit || '',
+        'Inspection': c.inspection === true ? 'Yes' : c.inspection === false ? 'Waived' : '',
+        'Appraisal': c.appraisal === true ? 'Yes' : c.appraisal === false ? 'Waived' : '',
+        'Financing Contingency': c.financing === true ? 'Yes' : c.financing === false ? 'Waived' : '',
+        'Title Company': s.agent_or_company || '',
+        'Contract Date': dt.contract_date || '',
+        'Closing Date': dt.closing_date || '',
+        'Possession Date': dt.possession_date || '',
+        'Special Stipulations': (data.special_stipulations || '').substring(0, 500),
+        'Contract Form': data.contract_form_type || ''
+      };
+
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(row)
+        });
+        statusEl.style.background = '#ecfdf5';
+        statusEl.style.color = 'var(--green)';
+        statusEl.textContent = '✓ Saved to Google Sheets';
+      } catch (err) {
+        statusEl.style.background = '#fef2f2';
+        statusEl.style.color = 'var(--red)';
+        statusEl.textContent = '✗ Failed to save to sheet: ' + err.message;
+      }
     }
 
     function toggleKeyVisibility() {
@@ -1053,6 +1137,9 @@ Important extraction rules:
         renderResults(result);
         document.getElementById('resultsContainer').classList.add('visible');
 
+        // Step 4: Auto-save to Google Sheets
+        saveToSheet(result);
+
       } catch (err) {
         hideProgress();
         document.getElementById('uploadPanel').style.display = 'block';
@@ -1350,6 +1437,7 @@ Important extraction rules:
     function uploadAnother() {
       document.getElementById('resultsContainer').classList.remove('visible');
       document.getElementById('uploadPanel').style.display = 'block';
+      document.getElementById('sheetStatus').style.display = 'none';
       clearFile();
       analysisResult = null;
     }
