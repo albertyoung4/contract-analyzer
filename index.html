@@ -408,10 +408,74 @@
       gap: 0.75rem 2rem;
     }
 
+    /* Desktop: show desktop title, hide mobile title */
+    .upload-title-mobile { display: none; }
+    .upload-title-desktop { display: block; }
+
     @media (max-width: 600px) {
+      /* Header */
+      header {
+        padding: 0.75rem 1rem;
+        gap: 0.75rem;
+      }
+      header img.logo { height: 50px; }
+      header h1 { font-size: 1.1rem; }
+      header p { font-size: 0.75rem; }
+
+      /* Container */
+      .container { padding: 0.75rem; gap: 0.75rem; }
+
+      /* Upload zone */
+      .upload-title-desktop { display: none; }
+      .upload-title-mobile { display: block; }
+      .upload-zone { padding: 2rem 1rem; }
+      .upload-zone h3 { font-size: 1rem; }
+
+      /* Settings */
+      .settings-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .settings-row input[type="password"],
+      .settings-row input[type="text"] {
+        min-width: 0;
+        width: 100%;
+      }
+      .settings-row select { width: 100%; }
+      .settings-row .btn { min-height: 44px; }
+
+      /* Results actions */
+      .results-actions { flex-direction: column; }
+      .results-actions .btn { width: 100%; min-height: 44px; justify-content: center; }
+
+      /* Result rows — stack vertically on mobile */
+      .result-row {
+        flex-direction: column;
+        gap: 0.1rem;
+      }
+      .result-label {
+        min-width: 0;
+        font-weight: 600;
+        color: var(--text-light);
+      }
+      .result-value { text-align: left; }
+
+      /* Summary grid */
       .summary-grid {
         grid-template-columns: 1fr;
+        gap: 0.5rem;
       }
+
+      /* Buttons — 44px minimum touch target */
+      .btn { min-height: 44px; font-size: 0.9rem; }
+      .btn-sm { min-height: 44px; padding: 0.5rem 0.75rem; }
+
+      /* File remove button — bigger touch target */
+      .file-remove { font-size: 1.5rem; padding: 0.25rem 0.5rem; }
+
+      /* Panels */
+      .panel-body { padding: 0.75rem; }
+      .panel-header { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
     }
 
     .summary-item {
@@ -513,8 +577,9 @@
       <div class="panel-body">
         <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
           <div class="icon">&#128196;</div>
-          <h3>Drag &amp; drop your purchase agreement</h3>
-          <p>or click to browse &mdash; PDF files only</p>
+          <h3 class="upload-title-desktop">Drag &amp; drop your purchase agreement</h3>
+          <h3 class="upload-title-mobile">Tap to select your purchase agreement</h3>
+          <p>or paste a copied PDF &mdash; PDF files only</p>
         </div>
         <input type="file" id="fileInput" accept=".pdf,application/pdf" style="display:none" />
         <div class="file-info" id="fileInfo">
@@ -698,6 +763,24 @@
 
     fileInput.addEventListener('change', () => {
       if (fileInput.files[0]) selectFile(fileInput.files[0]);
+    });
+
+    // Paste support — copy a PDF from Files/email, paste it here
+    document.addEventListener('paste', (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type === 'application/pdf') {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            dropZone.classList.add('dragover');
+            setTimeout(() => dropZone.classList.remove('dragover'), 300);
+            selectFile(file);
+          }
+          return;
+        }
+      }
     });
 
     function selectFile(file) {
