@@ -785,10 +785,10 @@
       };
 
       try {
-        const resp = await fetch(url, {
+        await fetch(url, {
           method: 'POST',
           mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify(row)
         });
         statusEl.style.background = '#ecfdf5';
