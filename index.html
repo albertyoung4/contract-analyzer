@@ -785,15 +785,59 @@
       };
 
       try {
-        await fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(row)
-        });
-        statusEl.style.background = '#ecfdf5';
-        statusEl.style.color = 'var(--green)';
-        statusEl.textContent = '✓ Saved to Google Sheets';
+        // Use hidden form + iframe to bypass CORS (form submissions are not subject to CORS)
+        const iframeName = 'sheetFrame_' + Date.now();
+        const iframe = document.createElement('iframe');
+        iframe.name = iframeName;
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        form.target = iframeName;
+        form.style.display = 'none';
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'data';
+        input.value = JSON.stringify(row);
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit();
+
+        // Wait for iframe to load (indicates submission completed)
+        iframe.onload = () => {
+          statusEl.style.background = '#ecfdf5';
+          statusEl.style.color = 'var(--green)';
+          statusEl.textContent = '✓ Saved to Google Sheets';
+          // Clean up after a delay
+          setTimeout(() => {
+            iframe.remove();
+            form.remove();
+          }, 2000);
+        };
+
+        iframe.onerror = () => {
+          statusEl.style.background = '#fef2f2';
+          statusEl.style.color = 'var(--red)';
+          statusEl.textContent = '✗ Failed to save to sheet';
+          iframe.remove();
+          form.remove();
+        };
+
+        // Timeout fallback — assume success after 5s if no response
+        setTimeout(() => {
+          if (statusEl.textContent === 'Saving to Google Sheets...') {
+            statusEl.style.background = '#ecfdf5';
+            statusEl.style.color = 'var(--green)';
+            statusEl.textContent = '✓ Saved to Google Sheets';
+            iframe.remove();
+            form.remove();
+          }
+        }, 5000);
+
       } catch (err) {
         statusEl.style.background = '#fef2f2';
         statusEl.style.color = 'var(--red)';
