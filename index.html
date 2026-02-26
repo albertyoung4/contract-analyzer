@@ -586,10 +586,169 @@
       font-weight: 400;
     }
 
+    /* Settings Gear Button */
+    .settings-gear-wrap { position: relative; }
+
+    .gear-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1.3rem;
+      cursor: pointer;
+      color: var(--primary);
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .gear-btn:hover { background: var(--section-bg); }
+
+    .settings-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      width: 380px;
+      max-width: 90vw;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      z-index: 1000;
+    }
+    .settings-dropdown.visible { display: block; }
+
+    /* Tab Bar */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 0;
+    }
+
+    .tab-btn {
+      padding: 0.6rem 1.5rem;
+      border: none;
+      background: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-light);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+
+    .tab-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* History Tab */
+    .history-tab-controls {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .history-search-input {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+    .history-search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(41,171,226,0.15);
+    }
+
+    .history-full-table tbody tr {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .history-full-table tbody tr:hover td { background: var(--section-bg); }
+
+    /* History Detail Overlay */
+    .history-detail-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .history-detail-panel {
+      background: var(--card);
+      border-radius: 10px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+
+    .history-detail-header {
+      background: var(--primary);
+      color: white;
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      border-radius: 10px 10px 0 0;
+    }
+
+    .history-detail-header .close-btn {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 1.2rem;
+      opacity: 0.8;
+    }
+    .history-detail-header .close-btn:hover { opacity: 1; }
+
+    .history-detail-body { padding: 1rem; }
+
+    .history-count {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      margin-top: 0.25rem;
+    }
+
+    @media (max-width: 600px) {
+      .gear-btn { min-width: 44px; min-height: 44px; }
+      .settings-dropdown { width: calc(100vw - 2rem); right: -0.5rem; }
+      .tab-btn { flex: 1; text-align: center; min-height: 44px; }
+      .history-tab-controls { flex-direction: column; }
+      .history-search-input { width: 100%; }
+      .history-full-table { font-size: 0.7rem; }
+      .history-detail-panel { max-height: 90vh; }
+    }
+
     /* Print */
     @media print {
       header { padding: 1rem; }
-      .settings-panel, .upload-panel, .progress-panel,
+      .gear-btn, .settings-dropdown, .tab-bar, #historyTab,
+      .upload-panel, .progress-panel,
       .results-actions, .error-banner { display: none !important; }
       .results-container { display: block !important; }
       .panel { break-inside: avoid; border: 1px solid #ccc; }
@@ -606,29 +765,17 @@
       <h1>MLS Offer Analysis</h1>
       <p>Upload a purchase agreement PDF for an instant offer summary</p>
     </div>
-  </header>
-
-  <div class="container">
-    <!-- Error Banner -->
-    <div id="errorBanner" class="error-banner">
-      <span id="errorMsg"></span>
-      <button class="dismiss" onclick="dismissError()">&times;</button>
-    </div>
-
-    <!-- Settings Panel -->
-    <div class="panel settings-panel">
-      <div class="panel-header">
-        <span>Settings</span>
-        <button class="toggle-btn" id="settingsToggle" onclick="toggleSettings()">Hide</button>
-      </div>
-      <div class="panel-body" id="settingsBody">
+    <div style="flex:1"></div>
+    <div class="settings-gear-wrap">
+      <button class="gear-btn" onclick="toggleSettingsModal()" title="Settings" aria-label="Settings">&#9881;</button>
+      <div class="settings-dropdown" id="settingsDropdown">
         <div class="settings-row">
           <label for="apiKey">API Key:</label>
           <input type="password" id="apiKey" placeholder="sk-ant-..." />
           <button class="btn btn-sm btn-outline" onclick="toggleKeyVisibility()">Show</button>
           <button class="btn btn-sm btn-primary" onclick="saveApiKey()">Save</button>
         </div>
-        <div class="hint">Your Anthropic API key. Stored locally in your browser only &mdash; never sent anywhere except Anthropic's servers.</div>
+        <div class="hint">Your Anthropic API key. Stored locally in your browser only.</div>
         <div class="settings-row" style="margin-top: 0.75rem;">
           <label for="modelSelect">Model:</label>
           <select id="modelSelect">
@@ -641,8 +788,25 @@
           <input type="text" id="sheetsUrl" placeholder="https://script.google.com/macros/s/..." />
           <button class="btn btn-sm btn-primary" onclick="saveSheetsUrl()">Save</button>
         </div>
-        <div class="hint">Google Apps Script URL for auto-saving results to a spreadsheet. <a href="#" onclick="alert('1. Create a Google Sheet\\n2. Go to Extensions → Apps Script\\n3. Paste the script code (see docs)\\n4. Deploy → New Deployment → Web App\\n5. Copy the URL and paste it here'); return false;" style="color:var(--accent)">Setup guide</a></div>
+        <div class="hint">Google Apps Script URL for auto-saving. <a href="#" onclick="alert('1. Create a Google Sheet\\n2. Go to Extensions → Apps Script\\n3. Paste the script code (see docs)\\n4. Deploy → New Deployment → Web App\\n5. Copy the URL and paste it here'); return false;" style="color:var(--accent)">Setup guide</a></div>
       </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tabAnalyze" onclick="switchTab('analyze')">Analyze</button>
+      <button class="tab-btn" id="tabHistory" onclick="switchTab('history')">History</button>
+    </div>
+
+    <!-- Analyze Tab -->
+    <div class="tab-content" id="analyzeTab">
+
+    <!-- Error Banner -->
+    <div id="errorBanner" class="error-banner">
+      <span id="errorMsg"></span>
+      <button class="dismiss" onclick="dismissError()">&times;</button>
     </div>
 
     <!-- Upload Panel -->
@@ -759,6 +923,44 @@
       <div class="panel" id="stipPanel" style="margin-bottom:1rem">
         <div class="panel-header">Special Stipulations / Additional Provisions</div>
         <div class="panel-body" id="stipRows"></div>
+      </div>
+    </div>
+    </div><!-- /analyzeTab -->
+
+    <!-- History Tab -->
+    <div class="tab-content" id="historyTab" style="display:none">
+      <div class="history-tab-controls">
+        <input type="text" class="history-search-input" id="historySearch" placeholder="Search by address, buyer, agent..." oninput="filterHistoryTable()" />
+        <button class="btn btn-primary" onclick="loadAllHistory()">&#8635; Refresh</button>
+      </div>
+      <div id="historyStatus" style="font-size:0.85rem; color:var(--text-light);"></div>
+      <div style="overflow-x:auto">
+        <table class="history-full-table" style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+          <thead>
+            <tr style="background:var(--section-bg); border-bottom:2px solid var(--border);">
+              <th style="padding:0.5rem; text-align:left;">Date</th>
+              <th style="padding:0.5rem; text-align:left;">Address</th>
+              <th style="padding:0.5rem; text-align:right;">Offer Price</th>
+              <th style="padding:0.5rem; text-align:left;">Financing</th>
+              <th style="padding:0.5rem; text-align:left;">Agent</th>
+              <th style="padding:0.5rem; text-align:right;">EMD</th>
+              <th style="padding:0.5rem; text-align:left;">Closing</th>
+              <th style="padding:0.5rem; text-align:left;">Inspection</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- History Detail Overlay -->
+    <div class="history-detail-overlay" id="historyDetailOverlay" style="display:none" onclick="if(event.target===this)closeHistoryDetail()">
+      <div class="history-detail-panel">
+        <div class="history-detail-header">
+          <span id="historyDetailTitle">Contract Details</span>
+          <button class="close-btn" onclick="closeHistoryDetail()">&times;</button>
+        </div>
+        <div class="history-detail-body" id="historyDetailBody"></div>
       </div>
     </div>
   </div>
@@ -1042,16 +1244,9 @@
       }
     }
 
-    function toggleSettings() {
-      const body = document.getElementById('settingsBody');
-      const btn = document.getElementById('settingsToggle');
-      if (body.style.display === 'none') {
-        body.style.display = 'block';
-        btn.textContent = 'Hide';
-      } else {
-        body.style.display = 'none';
-        btn.textContent = 'Show';
-      }
+    function toggleSettingsModal() {
+      const dd = document.getElementById('settingsDropdown');
+      dd.classList.toggle('visible');
     }
 
     // ===== FILE HANDLING =====
@@ -1676,6 +1871,205 @@ Important extraction rules:
       clearFile();
       analysisResult = null;
     }
+
+    // ===== TAB SWITCHING =====
+    let allHistoryData = null;
+    let historyLoaded = false;
+
+    function switchTab(tab) {
+      const analyzeTab = document.getElementById('analyzeTab');
+      const historyTab = document.getElementById('historyTab');
+      const btnAnalyze = document.getElementById('tabAnalyze');
+      const btnHistory = document.getElementById('tabHistory');
+
+      if (tab === 'analyze') {
+        analyzeTab.style.display = '';
+        historyTab.style.display = 'none';
+        btnAnalyze.classList.add('active');
+        btnHistory.classList.remove('active');
+      } else {
+        analyzeTab.style.display = 'none';
+        historyTab.style.display = '';
+        btnAnalyze.classList.remove('active');
+        btnHistory.classList.add('active');
+        if (!historyLoaded) loadAllHistory();
+      }
+    }
+
+    // ===== FULL HISTORY (ALL ROWS) =====
+    function loadAllHistory() {
+      const url = getSheetsUrl();
+      if (!url) {
+        document.getElementById('historyStatus').textContent = 'No Google Sheets URL configured. Set it in Settings.';
+        return;
+      }
+
+      document.getElementById('historyStatus').textContent = 'Loading history...';
+      document.getElementById('historyTableBody').innerHTML = '';
+
+      const callbackName = '_allHistoryCallback_' + Date.now();
+      const scriptUrl = url + '?mode=all&callback=' + callbackName;
+
+      window[callbackName] = function(rows) {
+        delete window[callbackName];
+        const scriptEl = document.getElementById(callbackName);
+        if (scriptEl) scriptEl.remove();
+
+        historyLoaded = true;
+        allHistoryData = rows || [];
+        renderAllHistory(allHistoryData);
+      };
+
+      const script = document.createElement('script');
+      script.id = callbackName;
+      script.src = scriptUrl;
+      script.onerror = function() {
+        delete window[callbackName];
+        script.remove();
+        document.getElementById('historyStatus').textContent = 'Failed to load history. Check your Sheets URL.';
+      };
+      document.head.appendChild(script);
+
+      setTimeout(() => {
+        if (window[callbackName]) {
+          delete window[callbackName];
+          const el = document.getElementById(callbackName);
+          if (el) el.remove();
+          document.getElementById('historyStatus').textContent = 'Request timed out. Try refreshing.';
+        }
+      }, 15000);
+    }
+
+    function renderAllHistory(rows) {
+      const tbody = document.getElementById('historyTableBody');
+      const statusEl = document.getElementById('historyStatus');
+
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = '';
+        statusEl.textContent = 'No contracts found.';
+        return;
+      }
+
+      statusEl.innerHTML = rows.length + ' contract' + (rows.length !== 1 ? 's' : '') + ' found';
+
+      let html = '';
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const date = r['Date Analyzed'] || '';
+        const addr = r['Property Address'] || '';
+        const price = r['Offer Price'] || '';
+        const financing = r['Financing Type'] || '';
+        const agent = r["Buyer's Agent"] || '';
+        const emd = r['EMD Amount'] || '';
+        const closing = r['Closing Date'] || '';
+        const inspection = r['Inspection'] || '';
+
+        let priceDisplay = price;
+        if (price && !isNaN(String(price).replace(/[$,]/g, ''))) {
+          const num = parseFloat(String(price).replace(/[$,]/g, ''));
+          priceDisplay = '$' + num.toLocaleString();
+        }
+
+        let emdDisplay = emd;
+        if (emd && !isNaN(String(emd).replace(/[$,]/g, ''))) {
+          const num = parseFloat(String(emd).replace(/[$,]/g, ''));
+          emdDisplay = '$' + num.toLocaleString();
+        }
+
+        let dateDisplay = date;
+        if (date) {
+          try {
+            const d = new Date(date);
+            if (!isNaN(d)) dateDisplay = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+          } catch(e) {}
+        }
+
+        html += `<tr onclick="showHistoryDetail(${i})" style="border-bottom:1px solid var(--border);">`;
+        html += `<td style="padding:0.4rem 0.5rem; white-space:nowrap;">${escapeHtml(dateDisplay)}</td>`;
+        html += `<td style="padding:0.4rem 0.5rem; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(addr)}</td>`;
+        html += `<td style="padding:0.4rem 0.5rem; text-align:right; white-space:nowrap; font-weight:600;">${escapeHtml(priceDisplay)}</td>`;
+        html += `<td style="padding:0.4rem 0.5rem;">${escapeHtml(financing)}</td>`;
+        html += `<td style="padding:0.4rem 0.5rem;">${escapeHtml(agent)}</td>`;
+        html += `<td style="padding:0.4rem 0.5rem; text-align:right; white-space:nowrap;">${escapeHtml(emdDisplay)}</td>`;
+        html += `<td style="padding:0.4rem 0.5rem; white-space:nowrap;">${escapeHtml(closing)}</td>`;
+        html += `<td style="padding:0.4rem 0.5rem;">${escapeHtml(inspection)}</td>`;
+        html += '</tr>';
+      }
+
+      tbody.innerHTML = html;
+    }
+
+    function filterHistoryTable() {
+      const query = document.getElementById('historySearch').value.toLowerCase().trim();
+      const rows = document.getElementById('historyTableBody').querySelectorAll('tr');
+
+      if (!query) {
+        rows.forEach(r => r.style.display = '');
+        return;
+      }
+
+      rows.forEach(r => {
+        const text = r.textContent.toLowerCase();
+        r.style.display = text.includes(query) ? '' : 'none';
+      });
+    }
+
+    function showHistoryDetail(idx) {
+      if (!allHistoryData || !allHistoryData[idx]) return;
+      const r = allHistoryData[idx];
+
+      const overlay = document.getElementById('historyDetailOverlay');
+      const body = document.getElementById('historyDetailBody');
+      const title = document.getElementById('historyDetailTitle');
+
+      title.textContent = r['Property Address'] || 'Contract Details';
+
+      // Build detail view with all fields
+      let html = '<div style="display:flex; flex-direction:column; gap:0.5rem;">';
+      const fields = Object.keys(r);
+      for (const key of fields) {
+        const val = r[key];
+        if (val === null || val === undefined || val === '') continue;
+        html += `<div style="display:flex; gap:0.5rem; padding:0.35rem 0; border-bottom:1px solid var(--border);">`;
+        html += `<span style="font-weight:600; min-width:140px; color:var(--text-light); font-size:0.8rem;">${escapeHtml(key)}</span>`;
+        html += `<span style="font-size:0.85rem;">${escapeHtml(String(val))}</span>`;
+        html += '</div>';
+      }
+      html += '</div>';
+
+      body.innerHTML = html;
+      overlay.style.display = 'flex';
+    }
+
+    function closeHistoryDetail() {
+      document.getElementById('historyDetailOverlay').style.display = 'none';
+    }
+
+    // ===== CLICK OUTSIDE / ESCAPE HANDLERS =====
+    document.addEventListener('click', function(e) {
+      const dropdown = document.getElementById('settingsDropdown');
+      const gearWrap = document.querySelector('.settings-gear-wrap');
+      if (dropdown.classList.contains('visible') && gearWrap && !gearWrap.contains(e.target)) {
+        dropdown.classList.remove('visible');
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        // Close settings dropdown
+        const dropdown = document.getElementById('settingsDropdown');
+        if (dropdown.classList.contains('visible')) {
+          dropdown.classList.remove('visible');
+          return;
+        }
+        // Close history detail overlay
+        const overlay = document.getElementById('historyDetailOverlay');
+        if (overlay.style.display === 'flex') {
+          closeHistoryDetail();
+          return;
+        }
+      }
+    });
 
     // ===== INIT =====
     loadApiKey();
