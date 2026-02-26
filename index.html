@@ -380,6 +380,80 @@
       padding: 0.15rem 0;
     }
 
+    /* Offer Summary */
+    .summary-panel {
+      background: white;
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--accent);
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .summary-panel .panel-header {
+      background: var(--primary);
+      color: white;
+      padding: 0.6rem 1rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .summary-panel .panel-body {
+      padding: 1rem;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem 2rem;
+    }
+
+    @media (max-width: 600px) {
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+
+    .summary-item .summary-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-light);
+      font-weight: 500;
+    }
+
+    .summary-item .summary-value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .summary-item .summary-value.money {
+      color: var(--green);
+    }
+
+    .summary-item .summary-value.highlight {
+      color: var(--primary);
+    }
+
+    .summary-item .summary-value.na {
+      color: var(--text-light);
+      font-style: italic;
+      font-weight: 400;
+    }
+
+    .summary-item .summary-sub {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      font-weight: 400;
+    }
+
     /* Print */
     @media print {
       header { padding: 1rem; }
@@ -473,6 +547,14 @@
       </div>
 
       <div id="formBadge" class="form-badge" style="display:none"></div>
+
+      <!-- Offer Summary -->
+      <div class="summary-panel" id="summaryPanel" style="display:none">
+        <div class="panel-header">Offer Summary</div>
+        <div class="panel-body">
+          <div class="summary-grid" id="summaryGrid"></div>
+        </div>
+      </div>
 
       <!-- Property & Price -->
       <div class="panel" style="margin-bottom:1rem">
@@ -774,8 +856,12 @@ Use this exact JSON structure. For any field not found in the document, use null
     "buyers": ["list of buyer full names"],
     "sellers": ["list of seller full names"],
     "listing_agent": "string",
+    "listing_agent_email": "string",
+    "listing_agent_phone": "string",
     "listing_brokerage": "string",
     "selling_agent": "string (buyer's agent)",
+    "selling_agent_email": "string",
+    "selling_agent_phone": "string",
     "selling_brokerage": "string"
   },
   "special_stipulations": "string (verbatim or summarized additional provisions, special stipulations, or addenda references)",
@@ -924,6 +1010,54 @@ Important extraction rules:
     }
 
     function renderResults(d) {
+      // === Offer Summary ===
+      const pa = d.parties || {};
+      const pt = d.price_and_terms || {};
+      const f = d.financing || {};
+      const c = d.contingencies || {};
+      const s = d.settlement || {};
+      const dt = d.dates || {};
+
+      // Determine buyer's agent info (selling_agent = buyer's agent in MLS terminology)
+      const agentName = pa.selling_agent || pa.listing_agent || null;
+      const agentEmail = pa.selling_agent_email || pa.listing_agent_email || null;
+      const agentPhone = pa.selling_agent_phone || pa.listing_agent_phone || null;
+
+      let agentHtml = '';
+      if (agentName) {
+        agentHtml = `<span class="summary-value highlight">${escapeHtml(agentName)}</span>`;
+        const contactParts = [agentEmail, agentPhone].filter(Boolean).map(v => escapeHtml(v));
+        if (contactParts.length) agentHtml += `<span class="summary-sub">${contactParts.join(' &bull; ')}</span>`;
+      } else {
+        agentHtml = '<span class="summary-value na">Not specified</span>';
+      }
+
+      // Financing type
+      const finType = f.type || null;
+      const isCash = finType && finType.toLowerCase().includes('cash');
+
+      // Inspection
+      let inspectVal;
+      if (c.inspection === true) inspectVal = '<span class="summary-value" style="color:var(--green)">Yes</span>';
+      else if (c.inspection === false) inspectVal = '<span class="summary-value" style="color:var(--red)">Waived</span>';
+      else inspectVal = '<span class="summary-value na">Not specified</span>';
+
+      // Title company
+      const titleCo = s.agent_or_company || null;
+
+      // Build summary grid
+      let summaryHtml = '';
+      summaryHtml += `<div class="summary-item"><span class="summary-label">Agent</span>${agentHtml}</div>`;
+      summaryHtml += `<div class="summary-item"><span class="summary-label">Offer Price</span><span class="summary-value money">${pt.purchase_price ? fmtMoney(pt.purchase_price) : '<span class="na">Not specified</span>'}</span></div>`;
+      summaryHtml += `<div class="summary-item"><span class="summary-label">Financing</span><span class="summary-value${isCash ? ' highlight' : ''}">${finType ? escapeHtml(finType) : '<span class="na">Not specified</span>'}</span></div>`;
+      summaryHtml += `<div class="summary-item"><span class="summary-label">Inspection</span>${inspectVal}</div>`;
+      summaryHtml += `<div class="summary-item"><span class="summary-label">Title Company</span><span class="summary-value">${titleCo ? escapeHtml(titleCo) : '<span class="na">Not specified</span>'}</span></div>`;
+      summaryHtml += `<div class="summary-item"><span class="summary-label">Earnest Money</span><span class="summary-value money">${pt.earnest_money_deposit ? fmtMoney(pt.earnest_money_deposit) : '<span class="na">Not specified</span>'}</span></div>`;
+      summaryHtml += `<div class="summary-item"><span class="summary-label">Closing Date</span><span class="summary-value highlight">${dt.closing_date ? fmtDate(dt.closing_date) : '<span class="na">Not specified</span>'}</span></div>`;
+
+      document.getElementById('summaryGrid').innerHTML = summaryHtml;
+      document.getElementById('summaryPanel').style.display = 'block';
+
       // Form type badge
       const badge = document.getElementById('formBadge');
       if (d.contract_form_type) {
@@ -943,7 +1077,6 @@ Important extraction rules:
       document.getElementById('propertyRows').innerHTML = propHtml;
 
       // Price & Terms
-      const pt = d.price_and_terms || {};
       let priceHtml = row('Purchase Price', fmtMoney(pt.purchase_price));
       priceHtml += row('Earnest Money Deposit', fmtMoney(pt.earnest_money_deposit));
       if (pt.earnest_money_holder) priceHtml += row('EMD Held By', fmt(pt.earnest_money_holder));
@@ -957,7 +1090,6 @@ Important extraction rules:
       document.getElementById('priceRows').innerHTML = priceHtml;
 
       // Financing
-      const f = d.financing || {};
       let finHtml = row('Type', fmt(f.type));
       finHtml += row('Loan Amount', fmtMoney(f.loan_amount));
       if (f.down_payment !== null && f.down_payment !== undefined) {
@@ -972,7 +1104,6 @@ Important extraction rules:
       document.getElementById('financingRows').innerHTML = finHtml;
 
       // Key Dates
-      const dt = d.dates || {};
       let datesHtml = '';
       if (dt.contract_date) datesHtml += row('Contract Date', fmtDate(dt.contract_date));
       datesHtml += row('Due Diligence / Inspection Deadline', fmtDate(dt.due_diligence_deadline));
@@ -983,13 +1114,11 @@ Important extraction rules:
       document.getElementById('datesRows').innerHTML = datesHtml;
 
       // Settlement
-      const s = d.settlement || {};
       let settHtml = row('Title Company / Attorney', fmt(s.agent_or_company));
       if (s.location) settHtml += row('Location', fmt(s.location));
       document.getElementById('settlementRows').innerHTML = settHtml;
 
       // Contingencies
-      const c = d.contingencies || {};
       let contHtml = '';
       const contItems = [
         ['Inspection', c.inspection],
@@ -1050,7 +1179,6 @@ Important extraction rules:
       }
 
       // Parties
-      const pa = d.parties || {};
       let parHtml = '';
       parHtml += row('Buyer(s)', pa.buyers && pa.buyers.length ? fmt(pa.buyers.join(', ')) : '<span class="na">Not specified</span>');
       parHtml += row('Seller(s)', pa.sellers && pa.sellers.length ? fmt(pa.sellers.join(', ')) : '<span class="na">Not specified</span>');
