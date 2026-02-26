@@ -478,6 +478,74 @@
       .panel-header { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
     }
 
+    /* Historical Offers */
+    .history-panel {
+      background: white;
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--primary);
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .history-panel .panel-header {
+      background: var(--primary);
+      color: white;
+      padding: 0.6rem 1rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .history-panel .panel-body {
+      padding: 0.75rem;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+
+    .history-table th {
+      background: var(--section-bg);
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 0.5rem 0.5rem;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .history-table td {
+      padding: 0.45rem 0.5rem;
+      border-bottom: 1px solid #f3f4f6;
+      color: var(--text);
+      vertical-align: top;
+    }
+
+    .history-table tr:last-child td { border-bottom: none; }
+
+    .history-table tr:hover td { background: #f9fafb; }
+
+    .history-table .money-col { color: var(--green); font-weight: 600; }
+    .history-table .date-col { white-space: nowrap; }
+
+    .history-note {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      margin-top: 0.5rem;
+      font-style: italic;
+    }
+
+    @media (max-width: 600px) {
+      .history-table { font-size: 0.7rem; }
+      .history-table th, .history-table td { padding: 0.35rem 0.3rem; }
+      .history-panel .panel-body { padding: 0.5rem; overflow-x: auto; }
+    }
+
     .summary-item {
       display: flex;
       flex-direction: column;
@@ -626,6 +694,12 @@
         <div class="panel-body">
           <div class="summary-grid" id="summaryGrid"></div>
         </div>
+      </div>
+
+      <!-- Historical Offers -->
+      <div class="history-panel" id="historyPanel" style="display:none">
+        <div class="panel-header">Historical Offers</div>
+        <div class="panel-body" id="historyBody"></div>
       </div>
 
       <!-- Property & Price -->
@@ -843,6 +917,117 @@
         statusEl.style.color = 'var(--red)';
         statusEl.textContent = '✗ Failed to save to sheet: ' + err.message;
       }
+    }
+
+    // ===== HISTORICAL OFFERS =====
+    function fetchHistory(address) {
+      const url = getSheetsUrl();
+      if (!url || !address) return;
+
+      // Reset history panel
+      document.getElementById('historyPanel').style.display = 'none';
+      document.getElementById('historyBody').innerHTML = '';
+
+      // JSONP: create a dynamic script tag to bypass CORS
+      const callbackName = '_historyCallback_' + Date.now();
+      const encodedAddr = encodeURIComponent(address.trim());
+      const scriptUrl = url + '?address=' + encodedAddr + '&callback=' + callbackName;
+
+      // Define the callback that the Apps Script will invoke
+      window[callbackName] = function(matches) {
+        // Clean up
+        delete window[callbackName];
+        const scriptEl = document.getElementById(callbackName);
+        if (scriptEl) scriptEl.remove();
+
+        if (matches && matches.length > 0) {
+          renderHistory(matches);
+        }
+      };
+
+      // Inject the script tag
+      const script = document.createElement('script');
+      script.id = callbackName;
+      script.src = scriptUrl;
+      script.onerror = function() {
+        delete window[callbackName];
+        script.remove();
+        // Silently fail — history is optional
+      };
+      document.head.appendChild(script);
+
+      // Timeout cleanup after 10 seconds
+      setTimeout(() => {
+        if (window[callbackName]) {
+          delete window[callbackName];
+          const el = document.getElementById(callbackName);
+          if (el) el.remove();
+        }
+      }, 10000);
+    }
+
+    function renderHistory(matches) {
+      const panel = document.getElementById('historyPanel');
+      const body = document.getElementById('historyBody');
+
+      // Build table
+      let html = '<table class="history-table"><thead><tr>';
+      html += '<th>Date</th>';
+      html += '<th>Offer Price</th>';
+      html += '<th>Financing</th>';
+      html += '<th>Agent</th>';
+      html += '<th>EMD</th>';
+      html += '<th>Closing</th>';
+      html += '<th>Inspection</th>';
+      html += '</tr></thead><tbody>';
+
+      for (const row of matches) {
+        const date = row['Date Analyzed'] || '';
+        const price = row['Offer Price'] || '';
+        const financing = row['Financing Type'] || '';
+        const agent = row["Buyer's Agent"] || '';
+        const emd = row['EMD Amount'] || '';
+        const closing = row['Closing Date'] || '';
+        const inspection = row['Inspection'] || '';
+
+        // Format price as currency if it's a number
+        let priceDisplay = price;
+        if (price && !isNaN(String(price).replace(/[$,]/g, ''))) {
+          const num = parseFloat(String(price).replace(/[$,]/g, ''));
+          priceDisplay = '$' + num.toLocaleString();
+        }
+
+        let emdDisplay = emd;
+        if (emd && !isNaN(String(emd).replace(/[$,]/g, ''))) {
+          const num = parseFloat(String(emd).replace(/[$,]/g, ''));
+          emdDisplay = '$' + num.toLocaleString();
+        }
+
+        // Short date format
+        let dateDisplay = date;
+        if (date) {
+          try {
+            const d = new Date(date);
+            if (!isNaN(d)) dateDisplay = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+          } catch(e) {}
+        }
+
+        html += '<tr>';
+        html += `<td class="date-col">${escapeHtml(dateDisplay)}</td>`;
+        html += `<td class="money-col">${escapeHtml(priceDisplay)}</td>`;
+        html += `<td>${escapeHtml(financing)}</td>`;
+        html += `<td>${escapeHtml(agent)}</td>`;
+        html += `<td class="money-col">${escapeHtml(emdDisplay)}</td>`;
+        html += `<td class="date-col">${escapeHtml(closing)}</td>`;
+        html += `<td>${escapeHtml(inspection)}</td>`;
+        html += '</tr>';
+      }
+
+      html += '</tbody></table>';
+      html += `<div class="history-note">${matches.length} previous offer${matches.length !== 1 ? 's' : ''} found for this address</div>`;
+
+      body.innerHTML = html;
+      panel.style.display = 'block';
     }
 
     function toggleKeyVisibility() {
@@ -1181,7 +1366,12 @@ Important extraction rules:
         renderResults(result);
         document.getElementById('resultsContainer').classList.add('visible');
 
-        // Step 4: Auto-save to Google Sheets
+        // Step 4: Check for historical offers from Google Sheets
+        const prop = result.property || {};
+        const address = [prop.street, prop.city, prop.state, prop.zip].filter(Boolean).join(', ');
+        if (address) fetchHistory(address);
+
+        // Step 5: Auto-save to Google Sheets
         saveToSheet(result);
 
       } catch (err) {
@@ -1482,6 +1672,7 @@ Important extraction rules:
       document.getElementById('resultsContainer').classList.remove('visible');
       document.getElementById('uploadPanel').style.display = 'block';
       document.getElementById('sheetStatus').style.display = 'none';
+      document.getElementById('historyPanel').style.display = 'none';
       clearFile();
       analysisResult = null;
     }
