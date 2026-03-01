@@ -49,12 +49,17 @@ function doGet(e) {
   var callback = e.parameter.callback || 'callback';
   var mode = e.parameter.mode || '';
 
-  // Mode: look up acquisition price from HubSpot
+  // Mode: look up acquisition price from database
   if (mode === 'acquisition') {
     var addr = e.parameter.address || '';
     var result = lookupAcquisitionPrice(addr);
-    return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ')')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    // Support both fetch (JSON) and JSONP
+    if (e.parameter.callback) {
+      return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 
   // Mode: return all rows (for History tab)

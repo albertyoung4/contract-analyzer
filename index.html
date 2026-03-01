@@ -1204,36 +1204,17 @@
       const url = getSheetsUrl();
       if (!url || !address) return;
 
-      const callbackName = '_acquisitionCallback_' + Date.now();
       const encodedAddr = encodeURIComponent(address.trim());
-      const scriptUrl = url + '?mode=acquisition&address=' + encodedAddr + '&callback=' + callbackName;
+      const fetchUrl = url + '?mode=acquisition&address=' + encodedAddr;
 
-      window[callbackName] = function(result) {
-        delete window[callbackName];
-        const scriptEl = document.getElementById(callbackName);
-        if (scriptEl) scriptEl.remove();
-
-        if (result && result.found) {
-          renderDealInfo(result, analysisResult);
-        }
-      };
-
-      const script = document.createElement('script');
-      script.id = callbackName;
-      script.src = scriptUrl;
-      script.onerror = function() {
-        delete window[callbackName];
-        script.remove();
-      };
-      document.head.appendChild(script);
-
-      setTimeout(() => {
-        if (window[callbackName]) {
-          delete window[callbackName];
-          const el = document.getElementById(callbackName);
-          if (el) el.remove();
-        }
-      }, 15000);
+      fetch(fetchUrl, { redirect: 'follow' })
+        .then(r => r.json())
+        .then(result => {
+          if (result && result.found) {
+            renderDealInfo(result, analysisResult);
+          }
+        })
+        .catch(err => console.error('Acquisition lookup failed:', err));
     }
 
     function renderDealInfo(dealResult, analysisResult) {
