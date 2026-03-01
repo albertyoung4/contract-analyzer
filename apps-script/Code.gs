@@ -40,13 +40,22 @@ function doPost(e) {
 /**
  * GET endpoint — called by the web app for Historical Offers (JSONP).
  * Supports two modes:
- *   ?mode=all&callback=fn         → returns ALL rows (newest first)
- *   ?address=123+Main&callback=fn → returns rows matching that address
+ *   ?mode=all&callback=fn              → returns ALL rows (newest first)
+ *   ?mode=acquisition&address=...&callback=fn → returns acquisition price from HubSpot
+ *   ?address=123+Main&callback=fn      → returns rows matching that address
  */
 function doGet(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var callback = e.parameter.callback || 'callback';
   var mode = e.parameter.mode || '';
+
+  // Mode: look up acquisition price from HubSpot
+  if (mode === 'acquisition') {
+    var addr = e.parameter.address || '';
+    var result = lookupAcquisitionPrice(addr);
+    return ContentService.createTextOutput(callback + '(' + JSON.stringify(result) + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
 
   // Mode: return all rows (for History tab)
   if (mode === 'all') {

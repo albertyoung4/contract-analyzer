@@ -860,6 +860,24 @@
         </div>
       </div>
 
+      <!-- Acquisition Price (HubSpot) -->
+      <div class="panel" id="acquisitionPanel" style="display:none; margin-bottom:1rem; border-left:3px solid var(--accent);">
+        <div class="panel-header" style="background:var(--accent); color:var(--primary);">Acquisition Price</div>
+        <div class="panel-body">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+            <div>
+              <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-light); margin-bottom:0.25rem;">Our Acquisition Price</div>
+              <div id="acquisitionPriceValue" style="font-size:1.25rem; font-weight:700; color:var(--primary);"></div>
+            </div>
+            <div>
+              <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-light); margin-bottom:0.25rem;">Offer vs. Acquisition</div>
+              <div id="acquisitionSpreadValue" style="font-size:1.25rem; font-weight:700;"></div>
+            </div>
+          </div>
+          <div id="acquisitionDealName" style="display:none; font-size:0.75rem; color:var(--text-light); margin-top:0.5rem;">Source: HubSpot</div>
+        </div>
+      </div>
+
       <!-- Historical Offers -->
       <div class="history-panel" id="historyPanel" style="display:none">
         <div class="panel-header">Historical Offers</div>
@@ -975,6 +993,7 @@
     // State
     let selectedFile = null;
     let analysisResult = null;
+    let acquisitionData = null; // HubSpot acquisition price data
 
     // ===== API KEY MANAGEMENT =====
     function loadApiKey() {
@@ -1166,6 +1185,96 @@
           if (el) el.remove();
         }
       }, 10000);
+    }
+
+    // ===== ACQUISITION PRICE (HubSpot) =====
+    function fetchAcquisitionPrice(address, analysisResult) {
+      const url = getSheetsUrl();
+      if (!url || !address) return;
+
+      const callbackName = '_acquisitionCallback_' + Date.now();
+      const encodedAddr = encodeURIComponent(address.trim());
+      const scriptUrl = url + '?mode=acquisition&address=' + encodedAddr + '&callback=' + callbackName;
+
+      window[callbackName] = function(result) {
+        delete window[callbackName];
+        const scriptEl = document.getElementById(callbackName);
+        if (scriptEl) scriptEl.remove();
+
+        if (result && result.found && result.acquisition_price !== null) {
+          renderAcquisitionPrice(result, analysisResult);
+        }
+      };
+
+      const script = document.createElement('script');
+      script.id = callbackName;
+      script.src = scriptUrl;
+      script.onerror = function() {
+        delete window[callbackName];
+        script.remove();
+      };
+      document.head.appendChild(script);
+
+      setTimeout(() => {
+        if (window[callbackName]) {
+          delete window[callbackName];
+          const el = document.getElementById(callbackName);
+          if (el) el.remove();
+        }
+      }, 15000);
+    }
+
+    function renderAcquisitionPrice(hubspotResult, analysisResult) {
+      acquisitionData = hubspotResult;
+      const acqPrice = hubspotResult.acquisition_price;
+      const offerPrice = (analysisResult.price_and_terms || {}).purchase_price;
+
+      // Update the acquisition price row in the summary panel
+      const acqEl = document.getElementById('acquisitionPriceValue');
+      if (acqEl) {
+        acqEl.innerHTML = fmtMoney(acqPrice);
+      }
+
+      // Update the deal name reference
+      const dealEl = document.getElementById('acquisitionDealName');
+      if (dealEl && hubspotResult.deal_name) {
+        dealEl.textContent = hubspotResult.deal_name;
+        dealEl.style.display = 'block';
+      }
+
+      // Calculate and show spread
+      if (offerPrice && acqPrice) {
+        const spread = offerPrice - acqPrice;
+        const spreadPct = ((spread / acqPrice) * 100).toFixed(1);
+        const isPositive = spread >= 0;
+
+        const spreadEl = document.getElementById('acquisitionSpreadValue');
+        if (spreadEl) {
+          const sign = isPositive ? '+' : '';
+          spreadEl.innerHTML = `<span style="color:${isPositive ? 'var(--green)' : 'var(--red)'}; font-weight:600;">${sign}${fmtMoney(spread)} (${sign}${spreadPct}%)</span>`;
+        }
+      }
+
+      // Show the acquisition panel
+      const panel = document.getElementById('acquisitionPanel');
+      if (panel) panel.style.display = 'block';
+
+      // Also add to the Price & Terms section
+      const priceRows = document.getElementById('priceRows');
+      if (priceRows) {
+        let acqHtml = '<div style="margin-top:0.75rem; padding-top:0.75rem; border-top:2px solid var(--accent);">';
+        acqHtml += '<div class="section-label" style="margin-top:0; color:var(--accent);">Acquisition Data (HubSpot)</div>';
+        acqHtml += row('Acquisition Price', fmtMoney(acqPrice));
+        if (offerPrice && acqPrice) {
+          const spread = offerPrice - acqPrice;
+          const spreadPct = ((spread / acqPrice) * 100).toFixed(1);
+          const isPositive = spread >= 0;
+          const sign = isPositive ? '+' : '';
+          acqHtml += row('Offer vs. Acquisition', `<span style="color:${isPositive ? 'var(--green)' : 'var(--red)'}; font-weight:600;">${sign}${fmtMoney(spread)} (${sign}${spreadPct}%)</span>`);
+        }
+        acqHtml += '</div>';
+        priceRows.insertAdjacentHTML('beforeend', acqHtml);
+      }
     }
 
     function renderHistory(matches) {
@@ -1566,7 +1675,10 @@ Important extraction rules:
         const address = [prop.street, prop.city, prop.state, prop.zip].filter(Boolean).join(', ');
         if (address) fetchHistory(address);
 
-        // Step 5: Auto-save to Google Sheets
+        // Step 5: Look up acquisition price from HubSpot
+        if (address) fetchAcquisitionPrice(address, result);
+
+        // Step 6: Auto-save to Google Sheets
         saveToSheet(result);
 
       } catch (err) {
@@ -1825,6 +1937,8 @@ Important extraction rules:
         p.county ? `County: ${p.county}` : null,
         '',
         `Purchase Price: ${money(pt.purchase_price)}`,
+        acquisitionData && acquisitionData.acquisition_price != null ? `Acquisition Price: ${money(acquisitionData.acquisition_price)}` : null,
+        acquisitionData && acquisitionData.acquisition_price != null && pt.purchase_price != null ? `Spread: ${money(pt.purchase_price - acquisitionData.acquisition_price)} (${((pt.purchase_price - acquisitionData.acquisition_price) / acquisitionData.acquisition_price * 100).toFixed(1)}%)` : null,
         `Earnest Money: ${money(pt.earnest_money_deposit)}`,
         pt.due_diligence_fee != null ? `Due Diligence Fee: ${money(pt.due_diligence_fee)}` : null,
         pt.option_fee != null ? `Option Fee: ${money(pt.option_fee)}` : null,
@@ -1868,8 +1982,10 @@ Important extraction rules:
       document.getElementById('uploadPanel').style.display = 'block';
       document.getElementById('sheetStatus').style.display = 'none';
       document.getElementById('historyPanel').style.display = 'none';
+      document.getElementById('acquisitionPanel').style.display = 'none';
       clearFile();
       analysisResult = null;
+      acquisitionData = null;
     }
 
     // ===== TAB SWITCHING =====
