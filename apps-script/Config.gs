@@ -9,8 +9,9 @@ function getConfig() {
     processedLabel: props.getProperty('PROCESSED_LABEL') || 'Purchase Agreements/Processed',
     notificationEmail: props.getProperty('NOTIFICATION_EMAIL') || '',
     model: props.getProperty('CLAUDE_MODEL') || 'claude-sonnet-4-20250514',
-    hubspotApiKey: props.getProperty('HUBSPOT_API_KEY'),
-    hubspotDealProperty: props.getProperty('HUBSPOT_DEAL_PROPERTY') || 'current_acquisiton_price'
+    metabaseApiKey: props.getProperty('METABASE_API_KEY'),
+    metabaseUrl: props.getProperty('METABASE_URL') || 'https://rebuilt.metabaseapp.com',
+    metabaseDatabaseId: parseInt(props.getProperty('METABASE_DATABASE_ID') || '35', 10)
   };
 }
 
@@ -24,23 +25,13 @@ function setApiKey() {
   }
 }
 
-// Run this once to securely store your HubSpot private app access token
-function setHubSpotApiKey() {
+// Run this once to securely store your Metabase API key
+function setMetabaseApiKey() {
   var ui = SpreadsheetApp.getUi();
-  var result = ui.prompt('Enter your HubSpot private app access token:');
+  var result = ui.prompt('Enter your Metabase API key:');
   if (result.getSelectedButton() === ui.Button.OK) {
-    PropertiesService.getScriptProperties().setProperty('HUBSPOT_API_KEY', result.getResponseText().trim());
-    ui.alert('HubSpot API key saved securely.');
-  }
-}
-
-// Run this to set the HubSpot deal property name for acquisition price
-function setHubSpotDealProperty() {
-  var ui = SpreadsheetApp.getUi();
-  var result = ui.prompt('Enter the HubSpot deal property internal name for acquisition price:', 'current_acquisiton_price', ui.ButtonSet.OK_CANCEL);
-  if (result.getSelectedButton() === ui.Button.OK) {
-    PropertiesService.getScriptProperties().setProperty('HUBSPOT_DEAL_PROPERTY', result.getResponseText().trim());
-    ui.alert('HubSpot deal property saved.');
+    PropertiesService.getScriptProperties().setProperty('METABASE_API_KEY', result.getResponseText().trim());
+    ui.alert('Metabase API key saved securely.');
   }
 }
 
