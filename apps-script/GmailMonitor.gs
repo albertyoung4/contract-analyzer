@@ -120,6 +120,13 @@ function checkGmailForContracts() {
 
           Logger.log('Saved: ' + fileName + ' -> ' + address);
 
+          // Post summary to Slack #dispo-leadership
+          try {
+            sendSlackSummary(row);
+          } catch (slackErr) {
+            Logger.log('Slack notification failed: ' + slackErr.message);
+          }
+
         } catch (err) {
           Logger.log('ERROR processing ' + fileName + ': ' + err.message);
           errors.push({
@@ -249,6 +256,124 @@ function sendNotification(email, results, errors) {
   }
 
   MailApp.sendEmail(email, subject, body);
+}
+
+// ===== SLACK NOTIFICATIONS =====
+
+/**
+ * Post a contract analysis summary to the #dispo-leadership Slack channel.
+ * Uses Slack incoming webhook URL stored in Script Properties.
+ * @param {Object} row - The mapped row object from mapAnalysisToRow()
+ */
+function sendSlackSummary(row) {
+  var config = getConfig();
+  var webhookUrl = config.slackWebhookUrl;
+
+  if (!webhookUrl) {
+    Logger.log('Slack webhook URL not configured. Run setSlackWebhookUrl() first.');
+    return;
+  }
+
+  // Format price with commas
+  var price = row['Offer Price'];
+  var priceStr = price ? '$' + Number(price).toLocaleString('en-US') : 'N/A';
+
+  // Format EMD
+  var emd = row['EMD Amount'];
+  var emdStr = emd ? '$' + Number(emd).toLocaleString('en-US') : 'N/A';
+
+  // Format down payment
+  var dp = row['Down Payment'];
+  var dpStr = dp ? '$' + Number(dp).toLocaleString('en-US') : 'N/A';
+
+  // Build contingencies line
+  var contingencies = [];
+  if (row['Inspection']) contingencies.push('Inspection: ' + row['Inspection']);
+  if (row['Appraisal']) contingencies.push('Appraisal: ' + row['Appraisal']);
+  if (row['Financing Contingency']) contingencies.push('Financing: ' + row['Financing Contingency']);
+  var contingencyStr = contingencies.length > 0 ? contingencies.join(' | ') : 'None specified';
+
+  var blocks = [
+    {
+      type: 'header',
+      text: { type: 'plain_text', text: '📋 New MLS Offer Analyzed', emoji: true }
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: '*Property:*\n' + (row['Property Address'] || 'N/A') },
+        { type: 'mrkdwn', text: '*Offer Price:*\n' + priceStr }
+      ]
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: '*Buyers:*\n' + (row['Buyers'] || 'N/A') },
+        { type: 'mrkdwn', text: '*Sellers:*\n' + (row['Sellers'] || 'N/A') }
+      ]
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: "*Buyer's Agent:*\n" + (row["Buyer's Agent"] || 'N/A') },
+        { type: 'mrkdwn', text: '*BAC:*\n' + (row['BAC'] || 'N/A') }
+      ]
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: '*Financing:*\n' + (row['Financing Type'] || 'N/A') + (dpStr !== 'N/A' ? ' (Down: ' + dpStr + ')' : '') },
+        { type: 'mrkdwn', text: '*EMD:*\n' + emdStr }
+      ]
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: '*Closing Date:*\n' + (row['Closing Date'] || 'N/A') },
+        { type: 'mrkdwn', text: '*Contract Date:*\n' + (row['Contract Date'] || 'N/A') }
+      ]
+    },
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: '*Contingencies:*  ' + contingencyStr }
+    },
+    {
+      type: 'section',
+      fields: [
+        { type: 'mrkdwn', text: '*Title Company:*\n' + (row['Title Company'] || 'N/A') },
+        { type: 'mrkdwn', text: '*Listing Agent:*\n' + (row['Listing Agent'] || 'N/A') }
+      ]
+    }
+  ];
+
+  // Add special stipulations if present
+  var stips = row['Special Stipulations'];
+  if (stips && stips.length > 0) {
+    blocks.push({
+      type: 'section',
+      text: { type: 'mrkdwn', text: '*Special Stipulations:*\n' + stips.substring(0, 300) + (stips.length > 300 ? '...' : '') }
+    });
+  }
+
+  var payload = {
+    blocks: blocks,
+    text: 'New MLS Offer: ' + (row['Property Address'] || 'Unknown') + ' - ' + priceStr
+  };
+
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  var response = UrlFetchApp.fetch(webhookUrl, options);
+  var code = response.getResponseCode();
+  if (code !== 200) {
+    throw new Error('Slack webhook returned ' + code + ': ' + response.getContentText());
+  }
+
+  Logger.log('Slack summary posted for: ' + (row['Property Address'] || 'Unknown'));
 }
 
 // ===== TRIGGER MANAGEMENT =====

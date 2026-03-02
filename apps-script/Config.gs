@@ -11,7 +11,9 @@ function getConfig() {
     model: props.getProperty('CLAUDE_MODEL') || 'claude-sonnet-4-20250514',
     metabaseApiKey: props.getProperty('METABASE_API_KEY'),
     metabaseUrl: props.getProperty('METABASE_URL') || 'https://rebuilt.metabaseapp.com',
-    metabaseDatabaseId: parseInt(props.getProperty('METABASE_DATABASE_ID') || '35', 10)
+    metabaseDatabaseId: parseInt(props.getProperty('METABASE_DATABASE_ID') || '35', 10),
+    slackWebhookUrl: props.getProperty('SLACK_WEBHOOK_URL') || '',
+    slackChannelId: props.getProperty('SLACK_CHANNEL_ID') || 'C0714ETDQAH'  // #dispo-leadership
   };
 }
 
@@ -32,6 +34,16 @@ function setMetabaseApiKey() {
   if (result.getSelectedButton() === ui.Button.OK) {
     PropertiesService.getScriptProperties().setProperty('METABASE_API_KEY', result.getResponseText().trim());
     ui.alert('Metabase API key saved securely.');
+  }
+}
+
+// Run this once to set the Slack incoming webhook URL for #dispo-leadership
+function setSlackWebhookUrl() {
+  var ui = SpreadsheetApp.getUi();
+  var result = ui.prompt('Enter Slack incoming webhook URL for #dispo-leadership:');
+  if (result.getSelectedButton() === ui.Button.OK) {
+    PropertiesService.getScriptProperties().setProperty('SLACK_WEBHOOK_URL', result.getResponseText().trim());
+    ui.alert('Slack webhook URL saved.');
   }
 }
 
