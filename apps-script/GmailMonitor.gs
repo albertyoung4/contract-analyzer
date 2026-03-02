@@ -169,6 +169,7 @@ function mapAnalysisToRow(data, fileName, emailSubject, emailFrom) {
     "Buyer's Agent": pa.selling_agent || '',
     'Agent Email': pa.selling_agent_email || '',
     'Agent Phone': pa.selling_agent_phone || '',
+    'BAC': pa.buyers_agent_commission || '',
     'Listing Agent': pa.listing_agent || '',
     'Offer Price': pt.purchase_price || '',
     'Financing Type': f.type || '',

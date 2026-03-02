@@ -1074,6 +1074,7 @@
         "Buyer's Agent": pa.selling_agent || '',
         'Agent Email': pa.selling_agent_email || '',
         'Agent Phone': pa.selling_agent_phone || '',
+        'BAC': pa.buyers_agent_commission || '',
         'Listing Agent': pa.listing_agent || '',
         'Offer Price': pt.purchase_price || '',
         'Financing Type': f.type || '',
@@ -1608,7 +1609,8 @@ Use this exact JSON structure. For any field not found in the document, use null
     "selling_agent": "string (buyer's agent)",
     "selling_agent_email": "string",
     "selling_agent_phone": "string",
-    "selling_brokerage": "string"
+    "selling_brokerage": "string",
+    "buyers_agent_commission": "string (buyer's agent commission - dollar amount, percentage, or description as written in contract)"
   },
   "special_stipulations": "string (verbatim or summarized additional provisions, special stipulations, or addenda references)",
   "contract_form_type": "string (e.g., 'NC Offer to Purchase and Contract - Form 2-T', 'GAR Purchase and Sale Agreement', 'TREC 1-4 Family Residential Contract', etc.)"
@@ -1621,7 +1623,8 @@ Important extraction rules:
 4. For NC contracts: look for "Due Diligence Fee" and "Due Diligence Period" specifically.
 5. For TX contracts: look for "Option Fee" and "Option Period" specifically.
 6. The "special_stipulations" field should capture any additional terms, addenda references, or special provisions.
-7. If the document appears to be a specific state form, identify it in "contract_form_type".`;
+7. If the document appears to be a specific state form, identify it in "contract_form_type".
+8. For buyer's agent commission, capture the exact amount or percentage as stated in the contract (e.g., "3%", "$10,000", "2.5% of purchase price"). Look for commission sections, broker compensation agreements, or buyer agency compensation terms.`;
 
     async function analyzeContract(text) {
       const apiKey = getApiKey();
@@ -1805,6 +1808,7 @@ Important extraction rules:
       // Build summary grid
       let summaryHtml = '';
       summaryHtml += `<div class="summary-item"><span class="summary-label">Agent</span>${agentHtml}</div>`;
+      summaryHtml += `<div class="summary-item"><span class="summary-label">BAC</span><span class="summary-value${pa.buyers_agent_commission ? ' highlight' : ''}">${pa.buyers_agent_commission ? escapeHtml(pa.buyers_agent_commission) : '<span class="na">Not specified</span>'}</span></div>`;
       summaryHtml += `<div class="summary-item"><span class="summary-label">Offer Price</span><span class="summary-value money">${pt.purchase_price ? fmtMoney(pt.purchase_price) : '<span class="na">Not specified</span>'}</span></div>`;
       summaryHtml += `<div class="summary-item"><span class="summary-label">Financing</span><span class="summary-value${isCash ? ' highlight' : ''}">${finType ? escapeHtml(finType) : '<span class="na">Not specified</span>'}</span></div>`;
       summaryHtml += `<div class="summary-item"><span class="summary-label">Inspection</span>${inspectVal}</div>`;
@@ -1947,6 +1951,7 @@ Important extraction rules:
         let sa = [pa.selling_agent, pa.selling_brokerage].filter(Boolean).join(' / ');
         parHtml += row("Buyer's Agent", fmt(sa));
       }
+      if (pa.buyers_agent_commission) parHtml += row("Buyer's Agent Commission", fmt(pa.buyers_agent_commission));
       document.getElementById('partiesRows').innerHTML = parHtml;
 
       // Special Stipulations
@@ -2013,6 +2018,7 @@ Important extraction rules:
         `Seller(s): ${pa.sellers?.join(', ') || na}`,
         pa.listing_agent ? `Listing Agent: ${pa.listing_agent}${pa.listing_brokerage ? ' / ' + pa.listing_brokerage : ''}` : null,
         pa.selling_agent ? `Buyer's Agent: ${pa.selling_agent}${pa.selling_brokerage ? ' / ' + pa.selling_brokerage : ''}` : null,
+        pa.buyers_agent_commission ? `Buyer's Agent Commission: ${pa.buyers_agent_commission}` : null,
         '',
         d.special_stipulations ? `Special Stipulations:\n${d.special_stipulations}` : null,
       ].filter(l => l !== null).join('\n');
