@@ -1,0 +1,6 @@
+# Test files
+*.pdf
+test.*
+
+# Claude Code
+.claude/

@@ -1626,6 +1626,18 @@ Important extraction rules:
 7. If the document appears to be a specific state form, identify it in "contract_form_type".
 8. For buyer's agent commission, capture the exact amount or percentage as stated in the contract (e.g., "3%", "$10,000", "2.5% of purchase price"). Look for commission sections, broker compensation agreements, or buyer agency compensation terms.`;
 
+    // System prompt adapted for native PDF document input (beta API)
+    const PDF_SYSTEM_PROMPT = SYSTEM_PROMPT.replace(
+      'Extract key details from the purchase agreement text provided',
+      'Extract key details from the attached PDF document of a purchase agreement. Carefully read all text in the document'
+    );
+
+    // System prompt adapted for scanned/image-based PDFs (fallback)
+    const SCANNED_SYSTEM_PROMPT = SYSTEM_PROMPT.replace(
+      'Extract key details from the purchase agreement text provided',
+      'Extract key details from the scanned page images of a purchase agreement. Carefully read and OCR all text visible in the images'
+    );
+
     async function analyzeContract(text) {
       const apiKey = getApiKey();
       const model = document.getElementById('modelSelect').value;
@@ -1670,55 +1682,117 @@ Important extraction rules:
       return JSON.parse(jsonStr);
     }
 
-    // ===== Helper: file to base64 using FileReader (handles large files) =====
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          // result is "data:application/pdf;base64,XXXXXX" — strip the prefix
-          const dataUrl = reader.result;
-          const base64 = dataUrl.split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsDataURL(file);
-      });
+    // ===== Helper: render PDF pages to base64 images using PDF.js =====
+    async function pdfPagesToImages(file, scale) {
+      scale = scale || 1.5;
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const images = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        // Get as JPEG to keep size manageable
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        images.push(dataUrl.split(',')[1]);
+      }
+      return images;
     }
 
-    // ===== SCANNED PDF FALLBACK (sends raw PDF to Claude) =====
+    // ===== SCANNED PDF FALLBACK =====
+    // Try native PDF document support first, fall back to page-image vision approach
     async function analyzeContractFromPDF(file) {
       const apiKey = getApiKey();
       const model = document.getElementById('modelSelect').value;
       localStorage.setItem('analyzer_model', model);
 
-      const base64 = await fileToBase64(file);
+      // First attempt: native PDF document support (beta)
+      showProgress('Analyzing scanned contract...', 'Sending PDF directly — this may take 30-60 seconds');
+      try {
+        const result = await analyzeContractFromPDFNative(file, apiKey, model);
+        return result;
+      } catch (nativeErr) {
+        console.warn('Native PDF approach failed, falling back to image approach:', nativeErr.message);
+      }
+
+      // Fallback: render pages as images and send via vision
+      showProgress('Converting scanned pages to images...', 'Rendering PDF pages');
+      const pageImages = await pdfPagesToImages(file);
+      showProgress('Analyzing scanned contract with AI vision...', 'Sending ' + pageImages.length + ' pages — this may take 30-60 seconds');
+
+      const contentBlocks = [];
+      for (let i = 0; i < pageImages.length; i++) {
+        contentBlocks.push({
+          type: 'image',
+          source: { type: 'base64', media_type: 'image/jpeg', data: pageImages[i] }
+        });
+      }
+      contentBlocks.push({
+        type: 'text',
+        text: 'The images above are scanned pages of a real estate purchase agreement. Please carefully read all text visible in each page image and extract every contract detail you can find. Return the filled JSON structure with all values you can identify from the scanned pages.'
+      });
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': apiKey,
-          'anthropic-version': '2024-10-22',
+          'anthropic-version': '2023-06-01',
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
           model: model,
-          max_tokens: 4096,
-          system: SYSTEM_PROMPT,
+          max_tokens: 8192,
+          system: SCANNED_SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: contentBlocks }]
+        })
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        if (response.status === 401) throw new Error('Invalid API key.');
+        if (response.status === 429) throw new Error('Rate limited. Please wait a moment and try again.');
+        if (response.status === 529) throw new Error('API overloaded. Please try again shortly.');
+        throw new Error('API error (' + response.status + '): ' + (errorBody?.error?.message || 'Unknown error'));
+      }
+
+      const data = await response.json();
+      const rawText = data.content?.[0]?.text || '';
+      return parseJsonResponse(rawText);
+    }
+
+    // Native PDF document approach using Anthropic beta
+    async function analyzeContractFromPDFNative(file, apiKey, model) {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(new Uint8Array(arrayBuffer).reduce((s, b) => s + String.fromCharCode(b), ''));
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-beta': 'pdfs-2024-09-25',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: model,
+          max_tokens: 8192,
+          system: PDF_SYSTEM_PROMPT,
           messages: [{
             role: 'user',
             content: [
               {
                 type: 'document',
-                source: {
-                  type: 'base64',
-                  media_type: 'application/pdf',
-                  data: base64
-                }
+                source: { type: 'base64', media_type: 'application/pdf', data: base64 }
               },
               {
                 type: 'text',
-                text: 'Extract all contract details from this real estate purchase agreement PDF.'
+                text: 'This is a scanned real estate purchase agreement PDF. Please carefully read all text in the document and extract every contract detail you can find. Return the filled JSON structure with all values you can identify.'
               }
             ]
           }]
@@ -1727,20 +1801,20 @@ Important extraction rules:
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => null);
-        if (response.status === 401) throw new Error('Invalid API key. Please check your Anthropic API key.');
-        if (response.status === 429) throw new Error('Rate limited. Please wait a moment and try again.');
-        if (response.status === 529) throw new Error('Anthropic API is temporarily overloaded. Please try again shortly.');
-        throw new Error('API error (' + response.status + '): ' + (errorBody?.error?.message || 'Unknown error'));
+        throw new Error('PDF API error (' + response.status + '): ' + (errorBody?.error?.message || 'Unknown'));
       }
 
       const data = await response.json();
-      const content = data.content?.[0]?.text || '';
+      const rawText = data.content?.[0]?.text || '';
+      return parseJsonResponse(rawText);
+    }
 
-      let jsonStr = content.trim();
+    // Shared JSON response parser
+    function parseJsonResponse(rawText) {
+      let jsonStr = rawText.trim();
       if (jsonStr.startsWith('```')) {
         jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
       }
-
       return JSON.parse(jsonStr);
     }
 
