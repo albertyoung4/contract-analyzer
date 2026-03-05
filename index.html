@@ -1847,7 +1847,9 @@ Important extraction rules:
 
         // Step 2: Analyze with Claude
         let result;
-        if (text.length < 100) {
+        // Strip page separators added by extractTextFromPDF to check actual content
+        const actualText = text.replace(/---\s*Page\s*\d+\s*---/g, '').trim();
+        if (actualText.length < 100) {
           // Scanned/image PDF — send raw PDF directly to Claude
           showProgress('Scanned PDF detected — analyzing with AI vision...', 'This may take 15-30 seconds');
           try {
